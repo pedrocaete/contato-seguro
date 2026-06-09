@@ -42,6 +42,15 @@ describe('Ticket routes', () => {
     });
 
     expect(response.status).toBe(201);
+    expect(prismaMock.ticket.create).toHaveBeenCalledWith({
+      data: {
+        userId: 1,
+        requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
+        channel: 'SAC',
+        priority: 'MEDIA',
+        manualReview: false
+      }
+    });
     expect(response.body).toEqual(
       expect.objectContaining({
         id: 1,
@@ -95,6 +104,40 @@ describe('Ticket routes', () => {
     expect(response.body).toHaveLength(1);
   });
 
+  it('lists tickets with filters', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([
+      {
+        id: 1,
+        userId: 1,
+        requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
+        channel: 'SAC',
+        status: 'ABERTO',
+        priority: 'MEDIA',
+        manualReview: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+
+    const response = await request(app).get('/tickets').query({
+      userId: '1',
+      status: 'ABERTO',
+      channel: 'SAC'
+    });
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.ticket.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 1,
+        status: 'ABERTO',
+        channel: 'SAC'
+      },
+      orderBy: {
+        id: 'asc'
+      }
+    });
+  });
+
   it('returns a ticket by id', async () => {
     prismaMock.ticket.findUnique.mockResolvedValue({
       id: 1,
@@ -144,6 +187,25 @@ describe('Ticket routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('EM_ANALISE');
+  });
+
+  it('returns 400 for invalid ticket filters', async () => {
+    const response = await request(app).get('/tickets').query({
+      userId: '0',
+      status: 'INVALIDO'
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Validation failed');
+  });
+
+  it('returns 400 for invalid ticket status update', async () => {
+    const response = await request(app).put('/tickets/1/status').send({
+      status: 'INVALIDO'
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Validation failed');
   });
 
   it('returns 404 when ticket is not found', async () => {

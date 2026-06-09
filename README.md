@@ -8,6 +8,16 @@ Este repositório concentra as diretrizes arquiteturais e operacionais do projet
 
 O ambiente de desenvolvimento foi preparado para rodar via Docker, com aplicação Node.js e PostgreSQL em containers separados.
 
+## Tecnologias
+
+- Node.js
+- TypeScript
+- Express
+- Prisma
+- PostgreSQL
+- Jest
+- Docker e Docker Compose
+
 ## Como usar com Docker
 
 1. Build e subida do ambiente completo:
@@ -51,6 +61,105 @@ Containers padrão:
 
 - App: `test_contato_seguro`
 - Banco: `test_contato_seguro_db`
+
+## Como testar
+
+Rode a suíte automatizada dentro do container da aplicação:
+
+```bash
+docker exec -it test_contato_seguro npm test
+```
+
+Valide o build TypeScript:
+
+```bash
+docker exec -it test_contato_seguro npm run build
+```
+
+## Endpoints
+
+- `GET /health`
+- `POST /users`
+- `GET /users`
+- `GET /users/:id`
+- `PUT /users/:id`
+- `DELETE /users/:id`
+- `POST /tickets`
+- `GET /tickets`
+- `GET /tickets/:id`
+- `PUT /tickets/:id/status`
+
+## Regras de classificação
+
+- `OUVIDORIA`: denúncias, assédio, fraude ou temas de conduta.
+- `SAC`: problemas com produto, entrega, assinatura ou atendimento.
+- `SUPORTE_TECNICO`: erro de acesso, bug, falha de sistema ou instabilidade.
+- `FINANCEIRO`: cobrança, pagamento, fatura ou reembolso.
+- `FORA_DO_ESCOPO`: mensagens vagas, sem contexto suficiente ou fora do cenário.
+
+Prioridade inicial:
+
+- `ALTA`: casos sensíveis como denúncia, assédio e fraude.
+- `MEDIA`: problemas de uso do serviço, acesso ou cobrança.
+- `BAIXA`: casos genéricos ou fora do escopo.
+
+Casos ambíguos ou sem contexto suficiente são marcados com `manualReview: true`.
+
+## Exemplos de requisição
+
+Health check:
+
+```bash
+curl http://localhost:3333/health
+```
+
+Criar usuário:
+
+```bash
+curl -X POST http://localhost:3333/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com"}'
+```
+
+Listar usuários:
+
+```bash
+curl http://localhost:3333/users
+```
+
+Criar ticket:
+
+```bash
+curl -X POST http://localhost:3333/tickets \
+  -H "Content-Type: application/json" \
+  -d '{"userId":1,"requestText":"Meu produto nao chegou e quero cancelar a assinatura."}'
+```
+
+Listar tickets:
+
+```bash
+curl http://localhost:3333/tickets
+```
+
+Listar tickets com filtros:
+
+```bash
+curl "http://localhost:3333/tickets?userId=1&status=ABERTO&channel=SAC"
+```
+
+Buscar ticket por id:
+
+```bash
+curl http://localhost:3333/tickets/1
+```
+
+Atualizar status do ticket:
+
+```bash
+curl -X PUT http://localhost:3333/tickets/1/status \
+  -H "Content-Type: application/json" \
+  -d '{"status":"EM_ANALISE"}'
+```
 
 ## Diretrizes Principais
 

@@ -73,6 +73,27 @@ describe('TicketService', () => {
     expect(result).toHaveLength(1);
   });
 
+  it('returns filtered tickets', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([createTicket()]);
+
+    await service.findAll({
+      userId: 1,
+      status: 'ABERTO',
+      channel: 'SAC'
+    });
+
+    expect(prismaMock.ticket.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 1,
+        status: 'ABERTO',
+        channel: 'SAC'
+      },
+      orderBy: {
+        id: 'asc'
+      }
+    });
+  });
+
   it('returns a ticket by id', async () => {
     prismaMock.ticket.findUnique.mockResolvedValue(createTicket());
 
