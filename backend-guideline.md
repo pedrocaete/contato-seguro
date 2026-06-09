@@ -1,6 +1,6 @@
 # Diretrizes de Arquitetura e Operação (Backend Unification)
 
-Padrões unificados para estrutura, controllers, services, validações (DTOs), logging, pacotes e integração com IA da API de Triagem de Tickets. O objetivo é manter o Express coeso, previsível e fácil de testar.
+Padrões unificados para estrutura, controllers, services, validações, camada `data`, logging, pacotes e integração com IA da API de Triagem de Tickets. O objetivo é manter o Express coeso, previsível e fácil de testar.
 
 ## Estrutura do Projeto
 
@@ -8,12 +8,19 @@ Padrões unificados para estrutura, controllers, services, validações (DTOs), 
 src/
 ├── controllers/    # Thin — delega a lógica para os Services
 ├── services/       # Lógica de domínio, orquestração e Prisma
-├── dtos/           # Schemas Zod e inferência de tipos TypeScript
+├── data/           # Schemas Zod e tipos inferidos para entrada da aplicação
 ├── middlewares/    # Interceptadores (Validação, Error Handler, Auth)
 ├── routes/         # Definição de URIs e mapeamento para Controllers
 ├── lib/            # Instâncias globais (Prisma, Logger, Gemini)
 └── app.ts          # Setup do Express (Middlewares globais, CORS)
 ```
+
+## Fluxo de Implementação
+
+- TDD como abordagem padrão: começar pelo teste, implementar o mínimo para passar e refatorar em seguida.
+- Prioridade de testes: unitários na camada de service e integração na camada HTTP.
+- Cada endpoint novo deve nascer com teste antes da implementação final.
+- Quando houver integração externa, isole por interface para preservar testes rápidos e determinísticos.
 
 ## Nomenclatura e Rotas
 
@@ -45,7 +52,7 @@ export class TicketController {
 ## Services — Regras
 
 - Single-responsibility: foco na regra de negócio. Um arquivo de Service por domínio (ex: `TicketService`, `UserService`, `IAService`).
-- Isolamento HTTP: Services não conhecem `req` ou `res`. Eles recebem tipos primitivos ou DTOs e retornam objetos ou disparam erros.
+- Isolamento HTTP: Services não conhecem `req` ou `res`. Eles recebem tipos primitivos ou tipos da camada `data` e retornam objetos ou disparam erros.
 - Acesso a dados: é a única camada autorizada a chamar o `prismaClient`. Substitui o uso de Repositories.
 - Erros: se uma regra de negócio falhar, lance um erro (preferencialmente uma classe `AppError` customizada) para interromper o fluxo. O Controller/Express vai capturar isso.
 
@@ -57,7 +64,7 @@ export class TicketService {
     private iaService: IAService
   ) {}
 
-  async create(data: CreateTicketDTO) {
+  async create(data: CreateTicketData) {
     const classificacao = await this.iaService.classify(data.texto_solicitacao);
 
     return this.prisma.ticket.create({
@@ -67,16 +74,17 @@ export class TicketService {
 }
 ```
 
-## DTOs e Validação (Zod) — Regras
+## Data e Validação (Zod) — Regras
 
 - Uma fonte de verdade: use o Zod para validar a entrada HTTP e gerar o tipo TypeScript no mesmo arquivo.
-- Nomenclatura: Schemas Zod usam sufixo `Schema` (ex: `CreateTicketSchema`). Os tipos inferidos usam sufixo `DTO` (ex: `CreateTicketDTO`).
+- Organização: concentre schemas e tipos de entrada na pasta `src/data`.
+- Nomenclatura: Schemas Zod usam sufixo `Schema` (ex: `CreateTicketSchema`). Os tipos inferidos usam sufixo `Data` (ex: `CreateTicketData`).
 - Onde validar: a validação é feita em um middleware genérico nas routes, não dentro do Controller.
 - Regras simples: deixe restrições de formato, tamanho e enum no Zod.
 - Regras complexas: validações de banco (ex: "ID do usuário não existe") ficam no Service.
 
 ```ts
-// dtos/ticket.dto.ts
+// data/ticket.data.ts
 import { z } from 'zod';
 
 export const CreateTicketSchema = z.object({
@@ -84,7 +92,7 @@ export const CreateTicketSchema = z.object({
   texto_solicitacao: z.string().min(10, 'Detalhe mais a sua solicitação.'),
 });
 
-export type CreateTicketDTO = z.infer<typeof CreateTicketSchema>;
+export type CreateTicketData = z.infer<typeof CreateTicketSchema>;
 ```
 
 ## Tratamento de Erros
@@ -235,19 +243,19 @@ export const validate = (schema: AnyZodObject) => (req: Request, res: Response, 
 router.post('/tickets', validate(CreateTicketSchema), ticketController.create);
 ```
 
-#### 2. DTO (A Tipagem / Spatie Data)
+#### 2. Data (A Tipagem / Spatie Data)
 
 O Controller repassa os dados validados para o Service usando o tipo inferido.
 
 ```typescript
-// dtos/ticket.dto.ts
+// data/ticket.data.ts
 export const CreateTicketSchema = z.object({ texto: z.string().min(10) });
-export type CreateTicketDTO = z.infer<typeof CreateTicketSchema>; // <-- O DTO real
+export type CreateTicketData = z.infer<typeof CreateTicketSchema>; // <-- O tipo real da camada de entrada
 
 // services/ticket.service.ts
 export class TicketService {
-  // O Service exige o DTO, ignorando o que aconteceu na requisição web
-  async create(data: CreateTicketDTO) {
+  // O Service exige o tipo da camada data, ignorando o que aconteceu na requisição web
+  async create(data: CreateTicketData) {
     // ...
   }
 }
@@ -533,7 +541,7 @@ describe('CreateTicketService', () => {
 
 ## Checklist de Novo Endpoint
 
-- [ ] Criar/Atualizar o Schema do Zod no DTO.
+- [ ] Criar/Atualizar o Schema do Zod na camada `data`.
 - [ ] Adicionar o método no Service focando apenas na lógica e no Prisma.
 - [ ] Criar o teste unitário do Service usando o Prisma mockado.
 - [ ] Adicionar o método no Controller chamando o Service.
