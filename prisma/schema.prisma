@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TicketChannel {
+  ouvidoria
+  sac
+  suporte_tecnico
+  financeiro
+  fora_do_escopo
+}
+
+enum TicketPriority {
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+enum TicketStatus {
+  ABERTO
+  EM_ANALISE
+  AGUARDANDO_USUARIO
+  FINALIZADO
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id                Int            @id @default(autoincrement())
+  userId            Int
+  texto_solicitacao String
+  canal             TicketChannel
+  status            TicketStatus   @default(ABERTO)
+  prioridade        TicketPriority
+  revisao_manual    Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([canal])
+}
