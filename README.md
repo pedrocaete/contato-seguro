@@ -17,10 +17,10 @@ docker compose build app
 docker compose up -d
 ```
 
-2. Rode a migration inicial dentro do container da aplicação:
+2. Rode as migrations já versionadas dentro do container da aplicação:
 
 ```bash
-docker exec -it test_contato_seguro npm run prisma:migrate -- --name init
+docker exec -it test_contato_seguro npm run prisma:deploy
 ```
 
 3. Acesse o container com shell interativo quando precisar:

@@ -1,4 +1,4 @@
-import { PrismaClient, User } from '@prisma/client';
+import { Prisma, PrismaClient, User } from '@prisma/client';
 
 import { CreateUserData, UpdateUserData } from '../data/user.data';
 import { AppError } from '../lib/app-error';
@@ -10,9 +10,14 @@ export class UserService {
   async create(data: CreateUserData): Promise<User> {
     await this.ensureEmailAvailable(data.email);
 
-    return this.prismaClient.user.create({
-      data
-    });
+    try {
+      return await this.prismaClient.user.create({
+        data
+      });
+    } catch (error) {
+      throwIfEmailAlreadyExists(error);
+      throw error;
+    }
   }
 
   async findAll(): Promise<User[]> {
@@ -42,10 +47,15 @@ export class UserService {
       await this.ensureEmailAvailable(data.email, id);
     }
 
-    return this.prismaClient.user.update({
-      where: { id },
-      data
-    });
+    try {
+      return await this.prismaClient.user.update({
+        where: { id },
+        data
+      });
+    } catch (error) {
+      throwIfEmailAlreadyExists(error);
+      throw error;
+    }
   }
 
   async delete(id: number): Promise<void> {
@@ -69,6 +79,12 @@ export class UserService {
       return;
     }
 
+    throw new AppError('Email already in use', 409);
+  }
+}
+
+function throwIfEmailAlreadyExists(error: unknown): void {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
     throw new AppError('Email already in use', 409);
   }
 }

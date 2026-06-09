@@ -1,5 +1,5 @@
 import { mockDeep } from 'jest-mock-extended';
-import { PrismaClient, User } from '@prisma/client';
+import { Prisma, PrismaClient, User } from '@prisma/client';
 
 import { AppError } from '../../src/lib/app-error';
 import { UserService } from '../../src/services/user.service';
@@ -46,6 +46,23 @@ describe('UserService', () => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+
+    await expect(
+      service.create({
+        name: 'Alice',
+        email: 'alice@example.com'
+      })
+    ).rejects.toThrow(new AppError('Email already in use', 409));
+  });
+
+  it('returns 409 when create hits the database unique constraint', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        clientVersion: '5.22.0',
+        code: 'P2002'
+      })
+    );
 
     await expect(
       service.create({
@@ -159,6 +176,28 @@ describe('UserService', () => {
       });
 
     await expect(service.update(1, { email: 'bob@example.com' })).rejects.toThrow(
+      new AppError('Email already in use', 409)
+    );
+  });
+
+  it('returns 409 when update hits the database unique constraint', async () => {
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        name: 'Alice',
+        email: 'alice@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .mockResolvedValueOnce(null);
+    prismaMock.user.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        clientVersion: '5.22.0',
+        code: 'P2002'
+      })
+    );
+
+    await expect(service.update(1, { email: 'alice.updated@example.com' })).rejects.toThrow(
       new AppError('Email already in use', 409)
     );
   });
