@@ -8,24 +8,24 @@ datasource db {
 }
 
 enum TicketChannel {
-  ouvidoria
-  sac
-  suporte_tecnico
-  financeiro
-  fora_do_escopo
+  COMPLAINT
+  CUSTOMER_SERVICE
+  TECHNICAL_SUPPORT
+  FINANCE
+  OUT_OF_SCOPE
 }
 
 enum TicketPriority {
-  ALTA
-  MEDIA
-  BAIXA
+  HIGH
+  MEDIUM
+  LOW
 }
 
 enum TicketStatus {
-  ABERTO
-  EM_ANALISE
-  AGUARDANDO_USUARIO
-  FINALIZADO
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  CLOSED
 }
 
 model User {
@@ -38,18 +38,18 @@ model User {
 }
 
 model Ticket {
-  id                Int            @id @default(autoincrement())
-  userId            Int
-  texto_solicitacao String
-  canal             TicketChannel
-  status            TicketStatus   @default(ABERTO)
-  prioridade        TicketPriority
-  revisao_manual    Boolean        @default(false)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           Int            @id @default(autoincrement())
+  userId       Int
+  requestText  String
+  channel      TicketChannel
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority
+  manualReview Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
-  @@index([canal])
+  @@index([channel])
 }

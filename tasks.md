@@ -35,7 +35,7 @@ Objetivo: entregar o CRUD completo de usuarios com TDD, seguindo controller fino
 Objetivo: entregar a criacao e consulta de tickets sem acoplar o dominio a um provedor externo.
 
 - [ ] Escrever os testes unitarios do fluxo principal de tickets e da interface de classificacao.
-- [ ] Modelar `Ticket` no Prisma, com relacao a `User`, status, canal, prioridade e revisao manual.
+- [ ] Modelar `Ticket` no Prisma, com relacao a `User`, status, channel, priority e manual review, mantendo naming do schema em Ingles.
 - [ ] Criar a interface `ITicketClassifier` e uma implementacao local baseada em regras.
 - [ ] Implementar a camada `data` de `ticket`, o `TicketService`, o `TicketController` e as rotas `POST /tickets`, `GET /tickets`, `GET /tickets/:id` e `PUT /tickets/:id/status`.
 - [ ] Escrever e fazer passar os testes de integracao HTTP de tickets.

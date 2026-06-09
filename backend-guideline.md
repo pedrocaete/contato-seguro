@@ -24,8 +24,8 @@ src/
 
 ## Nomenclatura e Rotas
 
-- Idioma: rotas, variáveis, classes e métodos em Inglês.
-- Exceção: chaves de banco específicas exigidas pelo desafio, como `texto_solicitacao`.
+- Idioma: rotas, variáveis, classes, métodos, tipos, enums e colunas de banco em Inglês.
+- Banco de dados: não manter exceções em Português. O schema também deve seguir naming em Inglês.
 - URIs: padrão REST, plural e kebab-case (ex: `/api/users`, `/api/tickets/:id/status`).
 - Injeção (DI Manual): como não há Service Container, instancie o Service dentro do Controller ou passe via construtor na montagem das rotas.
 
@@ -65,10 +65,10 @@ export class TicketService {
   ) {}
 
   async create(data: CreateTicketData) {
-    const classificacao = await this.iaService.classify(data.texto_solicitacao);
+    const classification = await this.iaService.classify(data.requestText);
 
     return this.prisma.ticket.create({
-      data: { ...data, ...classificacao }
+      data: { ...data, ...classification }
     });
   }
 }
@@ -81,7 +81,7 @@ export class TicketService {
 - Nomenclatura: Schemas Zod usam sufixo `Schema` (ex: `CreateTicketSchema`). Os tipos inferidos usam sufixo `Data` (ex: `CreateTicketData`).
 - Onde validar: a validação é feita em um middleware genérico nas routes, não dentro do Controller.
 - Regras simples: deixe restrições de formato, tamanho e enum no Zod.
-- Regras complexas: validações de banco (ex: "ID do usuário não existe") ficam no Service.
+- Regras complexas: validações de banco (ex: "user ID does not exist") ficam no Service.
 
 ```ts
 // data/ticket.data.ts
@@ -89,7 +89,7 @@ import { z } from 'zod';
 
 export const CreateTicketSchema = z.object({
   userId: z.number().positive(),
-  texto_solicitacao: z.string().min(10, 'Detalhe mais a sua solicitação.'),
+  requestText: z.string().min(10, 'Provide more details about the request.'),
 });
 
 export type CreateTicketData = z.infer<typeof CreateTicketSchema>;
@@ -98,8 +98,8 @@ export type CreateTicketData = z.infer<typeof CreateTicketSchema>;
 ## Tratamento de Erros
 
 - O projeto usa um `AppError` para definir erros conhecidos (Client Errors).
-- Service: `throw new AppError('Usuário não encontrado', 404);`
-- Global Error Middleware: intercepta a falha e devolve `{ error: 'Usuário não encontrado' }` com o status correto. Oculta stack traces em produção.
+- Service: `throw new AppError('User not found', 404);`
+- Global Error Middleware: intercepta a falha e devolve `{ error: 'User not found' }` com o status correto. Oculta stack traces em produção.
 - Logs: apenas erros 500 (falhas inesperadas/banco caiu) devem gerar um `logger.error()`. Erros 400 (ex: validação) não devem poluir os logs.
 
 ## Diretrizes de Logging Estruturado
@@ -166,14 +166,14 @@ Padrão (correto):
 ```ts
 logger.warn({
   ticketId: ticket.id,
-  canal: ticket.canal
+  channel: ticket.channel
 }, 'Ticket reclassificado manualmente.');
 ```
 
 Evite (incorreto):
 
 ```ts
-logger.warn(`Ticket ${ticket.id} foi reclassificado para ${ticket.canal}`);
+logger.warn(`Ticket ${ticket.id} was manually reclassified to ${ticket.channel}`);
 ```
 
 Motivo: dificulta busca por chaves em ferramentas de observabilidade (Datadog, CloudWatch) e piora o agrupamento.
@@ -249,7 +249,7 @@ O Controller repassa os dados validados para o Service usando o tipo inferido.
 
 ```typescript
 // data/ticket.data.ts
-export const CreateTicketSchema = z.object({ texto: z.string().min(10) });
+export const CreateTicketSchema = z.object({ requestText: z.string().min(10) });
 export type CreateTicketData = z.infer<typeof CreateTicketSchema>; // <-- O tipo real da camada de entrada
 
 // services/ticket.service.ts
@@ -261,7 +261,7 @@ export class TicketService {
 }
 ```
 
-- **Exceção:** Validações complexas que dependem do banco de dados (ex: "verificar se o email já existe na tabela de usuários") devem ser feitas no Service, não no schema do Zod.
+- **Exceção:** Validações complexas que dependem do banco de dados (ex: "check whether the email already exists") devem ser feitas no Service, não no schema do Zod.
 
 ### `express-async-errors`
 
@@ -316,10 +316,10 @@ app.use(pinoHttp({
 import { logger } from '../lib/logger';
 
 try {
-  const canal = await iaService.classificar(texto);
-  logger.info({ ticketId: 1, canal }, 'Ticket classificado pela IA');
+  const channel = await iaService.classify(requestText);
+  logger.info({ ticketId: 1, channel }, 'Ticket classified by AI');
 } catch (err) {
-  logger.error({ err }, 'IA fora do ar, usando fallback manual');
+  logger.error({ err }, 'AI unavailable, using manual fallback');
 }
 ```
 
@@ -362,9 +362,9 @@ import { GoogleGenAI } from '@google/genai';
 export class IAService {
   private ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-  async classificarTicket(texto: string): Promise<string> {
+  async classifyTicket(requestText: string): Promise<string> {
     // Prompt forçando retorno exato para casar com o enum do banco
-    const prompt = `Classifique o texto em: ouvidoria, sac, suporte_tecnico, financeiro, fora_do_escopo. Responda APENAS com a palavra. Texto: "${texto}"`;
+    const prompt = `Classify the text as one of: complaint, customer_service, technical_support, finance, out_of_scope. Reply ONLY with the category. Text: "${requestText}"`;
     const response = await this.ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
     return response.text.trim();
   }
@@ -381,13 +381,13 @@ A lógica de negócio não deve conhecer a API do Gemini. Dependa de uma interfa
 
 ```ts
 // src/domain/interfaces/ITicketClassifier.ts
-export type TicketChannel = 'ouvidoria' | 'sac' | 'suporte_tecnico' | 'financeiro' | 'fora_do_escopo';
-export type TicketPriority = 'ALTA' | 'MEDIA' | 'BAIXA';
+export type TicketChannel = 'complaint' | 'customer_service' | 'technical_support' | 'finance' | 'out_of_scope';
+export type TicketPriority = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface ClassificationResult {
-  canal: TicketChannel;
-  prioridade: TicketPriority;
-  revisao_manual: boolean;
+  channel: TicketChannel;
+  priority: TicketPriority;
+  manualReview: boolean;
 }
 
 export interface ITicketClassifier {
@@ -415,26 +415,26 @@ export class GeminiTicketClassifier implements ITicketClassifier {
   async classify(text: string): Promise<ClassificationResult> {
     try {
       const prompt = `
-        Você é um classificador automático de chamados.
-        Analise o texto e retorne estritamente um JSON.
+        You are an automatic ticket classifier.
+        Analyze the text and return strictly valid JSON.
 
-        Canais:
-        - ouvidoria: denuncias, assedio, fraude, corrupcao, conduta etica
-        - sac: problemas com assinatura, cancelamento, entrega, atendimento
-        - suporte_tecnico: erros de acesso, bugs, falhas de sistema, instabilidade
-        - financeiro: cobranca, pagamento, reembolso
-        - fora_do_escopo: mensagens vagas, sem contexto
+        Channels:
+        - complaint: reports, harassment, fraud, corruption, ethical misconduct
+        - customer_service: subscription, cancellation, delivery, support
+        - technical_support: access issues, bugs, failures, instability
+        - finance: billing, payment, refund
+        - out_of_scope: vague or context-free messages
 
-        Prioridades:
-        - ALTA: denuncias, assedio, fraude, situacoes sensiveis
-        - MEDIA: impactos no uso do servico, acesso, cobranca
-        - BAIXA: casos genericos ou sem urgencia
+        Priorities:
+        - HIGH: reports, harassment, fraud, sensitive situations
+        - MEDIUM: service usage impact, access issues, billing
+        - LOW: generic cases or low urgency
 
-        Regra Extra: Sinalize revisao_manual: true se houver ambiguidade.
+        Extra Rule: set manualReview to true if the case is ambiguous.
 
-        Texto: "${text}"
+        Text: "${text}"
 
-        Retorne APENAS JSON: {"canal": "string", "prioridade": "string", "revisao_manual": boolean}
+        Return ONLY JSON: {"channel": "string", "priority": "string", "manualReview": boolean}
       `;
 
       const response = await this.ai.models.generateContent({
@@ -445,7 +445,7 @@ export class GeminiTicketClassifier implements ITicketClassifier {
 
       return JSON.parse(response.text) as ClassificationResult;
     } catch (error) {
-      logger.error({ err: error, text }, 'Falha na IA, aplicando fallback');
+      logger.error({ err: error, text }, 'AI failed, applying fallback');
       return this.getFallback();
     }
   }
@@ -453,9 +453,9 @@ export class GeminiTicketClassifier implements ITicketClassifier {
   // 3. Estratégia de Fallback Interna
   private getFallback(): ClassificationResult {
     return {
-      canal: 'fora_do_escopo',
-      prioridade: 'BAIXA',
-      revisao_manual: true
+      channel: 'out_of_scope',
+      priority: 'LOW',
+      manualReview: true
     };
   }
 }
@@ -478,17 +478,17 @@ export class CreateTicketService {
 
   async execute(userId: number, text: string) {
     // 1. Chama a IA (se falhar, o fallback já garante o retorno)
-    const classificacao = await this.classifier.classify(text);
+    const classification = await this.classifier.classify(text);
 
     // 2. Persiste estruturado
     return await this.prisma.ticket.create({
       data: {
         userId,
-        texto_solicitacao: text,
-        canal: classificacao.canal,
-        prioridade: classificacao.prioridade,
-        status: 'ABERTO',
-        revisao_manual: classificacao.revisao_manual
+        requestText: text,
+        channel: classification.channel,
+        priority: classification.priority,
+        status: 'OPEN',
+        manualReview: classification.manualReview
       }
     });
   }
@@ -511,9 +511,9 @@ describe('CreateTicketService', () => {
     // Mock do Classificador
     const mockClassifier: ITicketClassifier = {
       classify: jest.fn().mockResolvedValue({
-        canal: 'sac',
-        prioridade: 'MEDIA',
-        revisao_manual: false
+        channel: 'customer_service',
+        priority: 'MEDIUM',
+        manualReview: false
       })
     };
 
@@ -527,7 +527,7 @@ describe('CreateTicketService', () => {
     expect(mockClassifier.classify).toHaveBeenCalledWith('Meu produto não chegou');
     expect(prismaMock.ticket.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ canal: 'sac', prioridade: 'MEDIA' })
+        data: expect.objectContaining({ channel: 'customer_service', priority: 'MEDIUM' })
       })
     );
   });
