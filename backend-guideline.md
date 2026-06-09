@@ -21,6 +21,8 @@ src/
 - Prioridade de testes: unitários na camada de service e integração na camada HTTP.
 - Cada endpoint novo deve nascer com teste antes da implementação final.
 - Quando houver integração externa, isole por interface para preservar testes rápidos e determinísticos.
+- Código sem comentários por padrão. Prefira nomes autoexplicativos para funções, métodos, variáveis e tipos.
+- Comentários só entram quando a alternativa for piorar de forma clara a legibilidade.
 
 ## Nomenclatura e Rotas
 
@@ -38,12 +40,10 @@ src/
 - Respostas: use HTTP Status Codes corretos (`200 OK`, `201 Created`, `204 No Content`).
 
 ```ts
-// ✅ Exemplo correto
 export class TicketController {
   constructor(private ticketService: TicketService) {}
 
   async create(req: Request, res: Response) {
-    // O req.body já chega aqui validado pelo Middleware do Zod
     const ticket = await this.ticketService.create(req.body);
     res.status(201).json(ticket);
   }
@@ -58,7 +58,6 @@ export class TicketController {
 - Erros: se uma regra de negócio falhar, lance um erro (preferencialmente uma classe `AppError` customizada) para interromper o fluxo. O Controller/Express vai capturar isso.
 
 ```ts
-// ✅ Exemplo correto
 export class TicketService {
   constructor(
     private prisma: PrismaClient,

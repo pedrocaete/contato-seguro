@@ -11,6 +11,7 @@ COPY prisma ./prisma
 RUN npx prisma generate
 
 COPY . .
+RUN chown -R 1000:984 /var/www
 
 EXPOSE 3333
 

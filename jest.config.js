@@ -1,6 +1,4 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+module.exports = {
   clearMocks: true,
   moduleFileExtensions: ['ts', 'js', 'json'],
   roots: ['<rootDir>/tests'],
@@ -10,5 +8,3 @@ const config: Config = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }]
   }
 };
-
-export default config;
