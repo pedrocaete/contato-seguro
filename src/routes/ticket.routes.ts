@@ -8,9 +8,10 @@ import {
 } from '../data/ticket.data';
 import { TicketController } from '../controllers/ticket.controller';
 import { validate } from '../middlewares/validate';
+import { createTicketClassifier } from '../services/create-ticket-classifier';
 import { TicketService } from '../services/ticket.service';
 
-const ticketService = new TicketService();
+const ticketService = new TicketService(undefined, createTicketClassifier());
 const ticketController = new TicketController(ticketService);
 
 export const ticketRoutes = Router();

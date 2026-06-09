@@ -54,9 +54,12 @@ Objetivo: fechar a entrega do desafio com consistencia de operacao, testes e doc
 
 Objetivo: substituir a classificacao local por uma integracao real sem retrabalho arquitetural.
 
-- [ ] Implementar um classifier baseado em Gemini por tras de `ITicketClassifier`.
-- [ ] Adicionar fallback, logs estruturados e testes unitarios da integracao.
-- [ ] Decidir se a classificacao final ficara sincrona ou ira para fila em etapa posterior.
+- [ ] Adicionar configuracao de ambiente para IA externa, incluindo `GEMINI_API_KEY`, modelo padrao e uma chave de estrategia para alternar entre classificador local e Gemini sem alterar o `TicketService`.
+- [ ] Instalar e integrar o SDK `@google/genai` em uma implementacao dedicada de `ITicketClassifier`, mantendo o contrato `ClassificationResult` como unica saida consumida pelo dominio.
+- [ ] Definir um prompt estruturado e uma validacao de resposta para obrigar o retorno estrito de `channel`, `priority` e `manualReview`, sempre usando os enums de dominio ja adotados no projeto.
+- [ ] Criar uma composicao de fallback em cadeia: tentativa com Gemini, log estruturado da falha e uso automatico do classificador local por regras quando a IA externa falhar, vier vazia ou responder fora do contrato esperado.
+- [ ] Escrever os testes unitarios da integracao cobrindo sucesso, resposta invalida, timeout ou erro do SDK e acionamento correto do fallback.
+- [ ] Manter a classificacao sincrona nesta primeira entrega de IA, documentando que a evolucao para fila e processamento assincrono fica como etapa posterior de escala.
 
 ## Ordem de execucao
 

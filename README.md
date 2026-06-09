@@ -8,6 +8,17 @@ Este repositório concentra as diretrizes arquiteturais e operacionais do projet
 
 O ambiente de desenvolvimento foi preparado para rodar via Docker, com aplicação Node.js e PostgreSQL em containers separados.
 
+## Configuração de ambiente
+
+Use o `.env` com base no `.env.example`.
+
+Variáveis principais:
+
+- `DATABASE_URL`: conexão com PostgreSQL usada pelo Prisma.
+- `TICKET_CLASSIFIER_PROVIDER`: `rule_based` ou `gemini`.
+- `GEMINI_MODEL`: modelo usado quando o provider for `gemini`.
+- `GEMINI_API_KEY`: obrigatória quando `TICKET_CLASSIFIER_PROVIDER=gemini`.
+
 ## Tecnologias
 
 - Node.js
