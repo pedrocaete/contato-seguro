@@ -24,8 +24,9 @@ src/
 
 ## Nomenclatura e Rotas
 
-- Idioma: rotas, variáveis, classes, métodos, tipos, enums e colunas de banco em Inglês.
-- Banco de dados: não manter exceções em Português. O schema também deve seguir naming em Inglês.
+- Idioma: rotas, variáveis, classes, métodos, tipos e colunas de banco em Inglês.
+- Enums de domínio: manter os valores em Português quando eles representam a comunicação do negócio (`OUVIDORIA`, `SAC`, `SUPORTE_TECNICO`, `FINANCEIRO`, `FORA_DO_ESCOPO`, `ABERTO`, `EM_ANALISE`, `ALTA`, `MEDIA`, `BAIXA`).
+- Banco de dados: nomes de tabelas, colunas e tipos em Inglês. Valores de enum podem permanecer em Português.
 - URIs: padrão REST, plural e kebab-case (ex: `/api/users`, `/api/tickets/:id/status`).
 - Injeção (DI Manual): como não há Service Container, instancie o Service dentro do Controller ou passe via construtor na montagem das rotas.
 
@@ -381,8 +382,8 @@ A lógica de negócio não deve conhecer a API do Gemini. Dependa de uma interfa
 
 ```ts
 // src/domain/interfaces/ITicketClassifier.ts
-export type TicketChannel = 'complaint' | 'customer_service' | 'technical_support' | 'finance' | 'out_of_scope';
-export type TicketPriority = 'HIGH' | 'MEDIUM' | 'LOW';
+export type TicketChannel = 'OUVIDORIA' | 'SAC' | 'SUPORTE_TECNICO' | 'FINANCEIRO' | 'FORA_DO_ESCOPO';
+export type TicketPriority = 'ALTA' | 'MEDIA' | 'BAIXA';
 
 export interface ClassificationResult {
   channel: TicketChannel;
@@ -419,16 +420,16 @@ export class GeminiTicketClassifier implements ITicketClassifier {
         Analyze the text and return strictly valid JSON.
 
         Channels:
-        - complaint: reports, harassment, fraud, corruption, ethical misconduct
-        - customer_service: subscription, cancellation, delivery, support
-        - technical_support: access issues, bugs, failures, instability
-        - finance: billing, payment, refund
-        - out_of_scope: vague or context-free messages
+        - OUVIDORIA: reports, harassment, fraud, corruption, ethical misconduct
+        - SAC: subscription, cancellation, delivery, support
+        - SUPORTE_TECNICO: access issues, bugs, failures, instability
+        - FINANCEIRO: billing, payment, refund
+        - FORA_DO_ESCOPO: vague or context-free messages
 
         Priorities:
-        - HIGH: reports, harassment, fraud, sensitive situations
-        - MEDIUM: service usage impact, access issues, billing
-        - LOW: generic cases or low urgency
+        - ALTA: reports, harassment, fraud, sensitive situations
+        - MEDIA: service usage impact, access issues, billing
+        - BAIXA: generic cases or low urgency
 
         Extra Rule: set manualReview to true if the case is ambiguous.
 
@@ -453,8 +454,8 @@ export class GeminiTicketClassifier implements ITicketClassifier {
   // 3. Estratégia de Fallback Interna
   private getFallback(): ClassificationResult {
     return {
-      channel: 'out_of_scope',
-      priority: 'LOW',
+      channel: 'FORA_DO_ESCOPO',
+      priority: 'BAIXA',
       manualReview: true
     };
   }
@@ -487,7 +488,7 @@ export class CreateTicketService {
         requestText: text,
         channel: classification.channel,
         priority: classification.priority,
-        status: 'OPEN',
+        status: 'ABERTO',
         manualReview: classification.manualReview
       }
     });
@@ -511,8 +512,8 @@ describe('CreateTicketService', () => {
     // Mock do Classificador
     const mockClassifier: ITicketClassifier = {
       classify: jest.fn().mockResolvedValue({
-        channel: 'customer_service',
-        priority: 'MEDIUM',
+        channel: 'SAC',
+        priority: 'MEDIA',
         manualReview: false
       })
     };
@@ -527,7 +528,7 @@ describe('CreateTicketService', () => {
     expect(mockClassifier.classify).toHaveBeenCalledWith('Meu produto não chegou');
     expect(prismaMock.ticket.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ channel: 'customer_service', priority: 'MEDIUM' })
+        data: expect.objectContaining({ channel: 'SAC', priority: 'MEDIA' })
       })
     );
   });

@@ -8,6 +8,7 @@ Este plano segue o [backend-guideline.md](./backend-guideline.md) e assume TDD c
 - A pasta de entrada e validacao sera `src/data`, nao `src/dtos`.
 - O CRUD basico sera entregue antes da integracao com IA externa.
 - A entidade `ticket` ja nasce com classificacao, mas a primeira versao usa uma implementacao local deterministica.
+- Colunas, tipos e propriedades ficam em Ingles, mas os valores de enum de dominio ficam em Portugues.
 - Cada etapa deve começar pelos testes mais relevantes e so depois pela implementacao.
 
 ## Etapa 0 - Ambiente e estrutura base
@@ -35,7 +36,7 @@ Objetivo: entregar o CRUD completo de usuarios com TDD, seguindo controller fino
 Objetivo: entregar a criacao e consulta de tickets sem acoplar o dominio a um provedor externo.
 
 - [ ] Escrever os testes unitarios do fluxo principal de tickets e da interface de classificacao.
-- [ ] Modelar `Ticket` no Prisma, com relacao a `User`, status, channel, priority e manual review, mantendo naming do schema em Ingles.
+- [ ] Modelar `Ticket` no Prisma, com relacao a `User`, status, channel, priority e manual review, mantendo nomes do schema em Ingles e valores de enum em Portugues.
 - [ ] Criar a interface `ITicketClassifier` e uma implementacao local baseada em regras.
 - [ ] Implementar a camada `data` de `ticket`, o `TicketService`, o `TicketController` e as rotas `POST /tickets`, `GET /tickets`, `GET /tickets/:id` e `PUT /tickets/:id/status`.
 - [ ] Escrever e fazer passar os testes de integracao HTTP de tickets.

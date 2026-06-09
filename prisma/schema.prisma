@@ -8,24 +8,24 @@ datasource db {
 }
 
 enum TicketChannel {
-  COMPLAINT
-  CUSTOMER_SERVICE
-  TECHNICAL_SUPPORT
-  FINANCE
-  OUT_OF_SCOPE
+  OUVIDORIA
+  SAC
+  SUPORTE_TECNICO
+  FINANCEIRO
+  FORA_DO_ESCOPO
 }
 
 enum TicketPriority {
-  HIGH
-  MEDIUM
-  LOW
+  ALTA
+  MEDIA
+  BAIXA
 }
 
 enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_FOR_CUSTOMER
-  CLOSED
+  ABERTO
+  EM_ANALISE
+  AGUARDANDO_CLIENTE
+  FECHADO
 }
 
 model User {
@@ -42,7 +42,7 @@ model Ticket {
   userId       Int
   requestText  String
   channel      TicketChannel
-  status       TicketStatus   @default(OPEN)
+  status       TicketStatus   @default(ABERTO)
   priority     TicketPriority
   manualReview Boolean        @default(false)
   createdAt    DateTime       @default(now())
