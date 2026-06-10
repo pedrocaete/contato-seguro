@@ -4,9 +4,16 @@ import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 
 const prismaMock = mockDeep<PrismaClient>();
+const classifyMock = jest.fn();
 
 jest.mock('../../src/lib/prisma', () => ({
   prisma: prismaMock
+}));
+
+jest.mock('../../src/services/create-ticket-classifier', () => ({
+  createTicketClassifier: () => ({
+    classify: classifyMock
+  })
 }));
 
 import { app } from '../../src/app';
@@ -14,6 +21,13 @@ import { app } from '../../src/app';
 describe('Ticket routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    classifyMock.mockResolvedValue({
+      channel: 'SAC',
+      priority: 'MEDIA',
+      manualReview: false,
+      confidence: 0.9,
+      alternatives: []
+    });
   });
 
   it('creates a ticket', async () => {

@@ -5,8 +5,10 @@
   "description": "API de triagem de tickets com Express, Prisma, PostgreSQL e Jest.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:worker:ticket-classification": "tsx watch src/workers/ticket-classification.worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "worker:ticket-classification": "tsx src/workers/ticket-classification.worker.ts",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",
@@ -16,11 +18,13 @@
   "dependencies": {
     "@google/genai": "^2.8.0",
     "@prisma/client": "^5.22.0",
+    "bullmq": "^5.78.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-async-errors": "^3.1.1",
     "helmet": "^8.0.0",
+    "ioredis": "^5.11.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "zod": "^3.24.1"

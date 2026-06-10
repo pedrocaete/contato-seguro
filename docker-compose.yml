@@ -11,12 +11,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     networks:
       - contato_seguro_net
     ports:
       - '3333:3333'
+    volumes:
+      - .:/var/www
+      - node_modules:/var/www/node_modules
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test_contato_seguro_worker
+    restart: unless-stopped
+    user: "1000:984"
+    working_dir: /var/www
+    command: npm run worker:ticket-classification
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    networks:
+      - contato_seguro_net
     volumes:
       - .:/var/www
       - node_modules:/var/www/node_modules
@@ -41,6 +65,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: test_contato_seguro_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - contato_seguro_net
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
 networks:
   contato_seguro_net:
     driver: bridge
@@ -48,3 +84,4 @@ networks:
 volumes:
   node_modules:
   postgres_data:
+  redis_data:

@@ -61,6 +61,16 @@ Objetivo: substituir a classificacao local por uma integracao real sem retrabalh
 - [x] Escrever os testes unitarios da integracao cobrindo sucesso, resposta invalida, timeout ou erro do SDK e acionamento correto do fallback.
 - [x] Manter a classificacao sincrona nesta primeira entrega de IA, documentando que a evolucao para fila e processamento assincrono fica como etapa posterior de escala.
 
+## Etapa 5 - Fila de classificacao assíncrona
+
+Objetivo: preparar a infraestrutura de fila para migrar a classificacao de tickets para processamento assincrono sem ainda alterar o contrato HTTP atual.
+
+- [x] Adicionar Redis ao `docker-compose.yml` e documentar as variaveis de ambiente da fila.
+- [x] Instalar `bullmq` e `ioredis` e criar a infraestrutura base de conexao, fila e worker dedicado.
+- [x] Criar o scaffold operacional do worker de classificacao de tickets, com logs estruturados de inicializacao, falha e encerramento.
+- [x] Manter o `POST /tickets` sincronico nesta fase 1, documentando que o enfileiramento real e a atualizacao assíncrona do status entram na fase seguinte.
+- [x] Garantir que a suite de testes e o build continuem estaveis com a nova infraestrutura presente no projeto.
+
 ## Ordem de execucao
 
 1. Etapa 0 - Ambiente e estrutura base.
@@ -68,3 +78,4 @@ Objetivo: substituir a classificacao local por uma integracao real sem retrabalh
 3. Etapa 2 - Entidade Ticket sem IA externa.
 4. Etapa 3 - Fechamento da entrega basica.
 5. Etapa 4 - IA externa.
+6. Etapa 5 - Fila de classificacao assincrona.

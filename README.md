@@ -7,6 +7,7 @@ API de triagem de tickets com foco em padronização de backend, validação, lo
 Este repositório concentra as diretrizes arquiteturais e operacionais do projeto. O objetivo é manter a API previsível, testável e consistente mesmo sob crescimento de carga.
 
 O ambiente de desenvolvimento foi preparado para rodar via Docker, com aplicação Node.js e PostgreSQL em containers separados.
+Também existe a infraestrutura inicial da fila com Redis e um worker dedicado para a futura classificação assíncrona de tickets.
 
 ## Configuração de ambiente
 
@@ -27,6 +28,8 @@ Variáveis principais:
 - `GEMINI_API_KEY`: obrigatória quando `TICKET_CLASSIFIER_PROVIDER=gemini`.
 - `GEMINI_TIMEOUT_MS`: timeout por tentativa da chamada ao Gemini.
 - `GEMINI_MAX_RETRIES`: número de novas tentativas antes de cair no fallback local.
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`: conexão usada pela fila BullMQ.
+- `QUEUE_TICKET_CLASSIFICATION_NAME`: nome lógico da fila de classificação de tickets.
 
 ## Tecnologias
 
@@ -76,11 +79,25 @@ Portas padrão:
 
 - App: `http://localhost:3333`
 - PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
 
 Containers padrão:
 
 - App: `test_contato_seguro`
 - Banco: `test_contato_seguro_db`
+- Worker: `test_contato_seguro_worker`
+- Redis: `test_contato_seguro_redis`
+
+## Fila
+
+A fase 1 da fila já está estruturada com:
+
+- Redis no Docker Compose
+- BullMQ como biblioteca de fila
+- worker dedicado para classificação de tickets
+
+Nesta etapa, a infraestrutura da fila já sobe com o ambiente, mas o `POST /tickets` ainda continua síncrono.
+O worker foi criado como scaffold operacional e o processamento real do job entra na próxima fase.
 
 ## Como testar
 
