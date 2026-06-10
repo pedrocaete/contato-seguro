@@ -1,6 +1,5 @@
 import { TicketChannel, TicketPriority } from '@prisma/client';
 
-import { logger } from '../lib/logger';
 import { ClassificationResult, ITicketClassifier } from './ticket-classifier';
 
 type CategoryRule = {
@@ -45,55 +44,25 @@ export class RuleBasedTicketClassifier implements ITicketClassifier {
       .sort((left, right) => right.score - left.score);
 
     if (matches.length === 0) {
-      const classification: ClassificationResult = {
+      return {
         channel: 'FORA_DO_ESCOPO',
         priority: 'BAIXA',
         manualReview: true,
         confidence: 0.2,
         alternatives: []
       };
-
-      logger.info(
-        {
-          action: 'classify_ticket',
-          classifier: 'rule_based',
-          channel: classification.channel,
-          priority: classification.priority,
-          manualReview: classification.manualReview,
-          confidence: classification.confidence,
-          alternatives: classification.alternatives
-        },
-        'Ticket classified with rule-based fallback'
-      );
-
-      return classification;
     }
 
     const [winner, second] = matches;
     const alternatives = second ? [second.channel] : [];
     const confidence = calculateConfidence(winner.score, second?.score);
-    const classification: ClassificationResult = {
+    return {
       channel: winner.channel,
       priority: winner.priority,
       manualReview: Boolean(second && second.score === winner.score),
       confidence,
       alternatives
     };
-
-    logger.info(
-      {
-        action: 'classify_ticket',
-        classifier: 'rule_based',
-        channel: classification.channel,
-        priority: classification.priority,
-        manualReview: classification.manualReview,
-        confidence: classification.confidence,
-        alternatives: classification.alternatives
-      },
-      'Ticket classified with rule-based fallback'
-    );
-
-    return classification;
   }
 }
 

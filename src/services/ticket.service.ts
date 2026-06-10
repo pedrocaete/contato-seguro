@@ -16,11 +16,10 @@ export class TicketService {
   async create(data: CreateTicketData): Promise<Ticket> {
     await this.ensureUserExists(data.userId);
 
-    const normalizedClassification = normalizeClassificationResult(
-      await this.classifier.classify(data.requestText)
-    );
+    const classification = await this.classifier.classify(data.requestText);
+    const normalizedClassification = normalizeClassificationResult(classification);
 
-    logManualReviewPromotion(data.userId, normalizedClassification);
+    logManualReviewPromotion(data.userId, classification, normalizedClassification);
 
     return this.prismaClient.ticket.create({
       data: {
@@ -99,40 +98,44 @@ function deduplicateAlternativeChannels(
 
 function logManualReviewPromotion(
   userId: number,
-  classification: ClassificationResult
+  originalClassification: ClassificationResult,
+  normalizedClassification: ClassificationResult
 ): void {
-  if (!classification.manualReview) {
+  if (!normalizedClassification.manualReview) {
     return;
   }
 
-  const reasons = getManualReviewReasons(classification);
+  const reasons = getManualReviewReasons(originalClassification, normalizedClassification);
 
   logger.info(
     {
       action: 'classify_ticket',
       userId,
-      channel: classification.channel,
-      priority: classification.priority,
-      confidence: classification.confidence,
-      alternatives: classification.alternatives,
+      channel: normalizedClassification.channel,
+      priority: normalizedClassification.priority,
+      confidence: normalizedClassification.confidence,
+      alternatives: normalizedClassification.alternatives,
       manualReviewReasons: reasons
     },
     'Ticket promoted to manual review'
   );
 }
 
-function getManualReviewReasons(classification: ClassificationResult): string[] {
+function getManualReviewReasons(
+  originalClassification: ClassificationResult,
+  normalizedClassification: ClassificationResult
+): string[] {
   const reasons: string[] = [];
 
-  if (classification.confidence < classificationConfidenceThreshold) {
+  if (normalizedClassification.confidence < classificationConfidenceThreshold) {
     reasons.push('low_confidence');
   }
 
-  if (classification.alternatives.length > 0) {
+  if (normalizedClassification.alternatives.length > 0) {
     reasons.push('has_alternatives');
   }
 
-  if (classification.manualReview) {
+  if (originalClassification.manualReview) {
     reasons.push('classifier_flagged_review');
   }
 

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
+import { createGeminiModelsClient } from '../lib/gemini';
 import { logger } from '../lib/logger';
 import {
   ClassificationResult,
@@ -43,7 +44,7 @@ export class GeminiTicketClassifier implements ITicketClassifier {
   ): GeminiTicketClassifier {
     return new GeminiTicketClassifier(
       model,
-      new GoogleGenAI({ apiKey }).models,
+      createGeminiModelsClient(apiKey),
       fallback,
       timeoutMs,
       maxRetries
