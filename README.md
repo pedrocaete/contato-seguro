@@ -89,6 +89,8 @@ Valide o build TypeScript:
 docker exec -it test_contato_seguro npm run build
 ```
 
+Para testes manuais da API, use o arquivo [`requests.http`](./requests.http).
+
 ## Endpoints
 
 - `GET /health`
@@ -130,6 +132,8 @@ O backend tambem promove `manualReview` automaticamente quando:
 - o classificador ja sinalizar ambiguidade explicitamente
 
 ## Exemplos de requisição
+
+As chamadas abaixo também estão organizadas em [`requests.http`](./requests.http).
 
 Health check:
 

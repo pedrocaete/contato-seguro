@@ -1,0 +1,103 @@
+@baseUrl = http://localhost:3333
+@userId = 1
+@ticketId = 1
+
+### Verificar saude
+GET {{baseUrl}}/health
+
+### Criar usuario
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+
+### Listar usuarios
+GET {{baseUrl}}/users
+
+### Buscar usuario por id
+GET {{baseUrl}}/users/{{userId}}
+
+### Atualizar usuario
+PUT {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+
+{
+  "name": "Alice Updated",
+  "email": "alice.updated@example.com"
+}
+
+### Remover usuario
+DELETE {{baseUrl}}/users/{{userId}}
+
+### Criar ticket classificado como SAC
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "requestText": "Meu produto nao chegou e quero cancelar a assinatura."
+}
+
+### Criar ticket classificado como OUVIDORIA
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "requestText": "Quero denunciar fraude e assedio no atendimento."
+}
+
+### Criar ticket ambiguo para revisao manual
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "requestText": "Tenho erro e cobranca indevida."
+}
+
+### Listar tickets
+GET {{baseUrl}}/tickets
+
+### Listar tickets com filtros
+GET {{baseUrl}}/tickets?userId=1&status=ABERTO&channel=SAC
+
+### Buscar ticket por id
+GET {{baseUrl}}/tickets/{{ticketId}}
+
+### Atualizar status do ticket
+PUT {{baseUrl}}/tickets/{{ticketId}}/status
+Content-Type: application/json
+
+{
+  "status": "EM_ANALISE"
+}
+
+### Payload invalido de usuario
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "invalido"
+}
+
+### Payload invalido de ticket
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "userId": 0,
+  "requestText": "curto"
+}
+
+### Status invalido de ticket
+PUT {{baseUrl}}/tickets/{{ticketId}}/status
+Content-Type: application/json
+
+{
+  "status": "INVALIDO"
+}
