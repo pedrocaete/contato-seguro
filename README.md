@@ -275,20 +275,8 @@ curl -X PUT http://localhost:3333/tickets/1/status \
   -d '{"status":"EM_ANALISE"}'
 ```
 
-## Diretrizes Principais
-
-- Use controllers finos, com regra de negócio concentrada em services.
-- Valide entrada HTTP com Zod e mantenha a camada `data` como fonte de tipagem.
-- Centralize tratamento de erros em middleware global.
-- Faça logging estruturado apenas quando houver valor operacional real.
-- Para cenários de alto volume, prefira processamento assíncrono da classificação por IA e uso de filas para atualizar o estado.
-
 ## Documentação Técnica
 
 - [backend-guideline.md](./backend-guideline.md): guia único com arquitetura, logging, pacotes, testes e integração com Gemini.
 - [teste-tecnico.md](./teste-tecnico.md): enunciado do teste técnico.
 - `desafio_tecnico_contato_seguro_2 (1) (1).pdf`: material original do desafio.
-
-## Observação de Escala
-
-Quando o volume de acesso crescer significativamente, considere reduzir ruído de logs e registrar apenas o necessário para operação.
