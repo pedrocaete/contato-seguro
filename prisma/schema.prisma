@@ -41,11 +41,11 @@ model Ticket {
   id                         Int            @id @default(autoincrement())
   userId                     Int
   requestText                String
-  channel                    TicketChannel
+  channel                    TicketChannel?
   status                     TicketStatus   @default(ABERTO)
-  priority                   TicketPriority
+  priority                   TicketPriority?
   manualReview               Boolean        @default(false)
-  classificationConfidence   Float
+  classificationConfidence   Float?
   classificationAlternatives TicketChannel[]
   createdAt                  DateTime       @default(now())
   updatedAt                  DateTime       @updatedAt

@@ -1,5 +1,6 @@
 import { PrismaClient, Ticket } from '@prisma/client';
 
+import { ITicketClassificationDispatcher, NoopTicketClassificationDispatcher } from '../queues/ticket-classification-dispatcher';
 import { CreateTicketData, ListTicketsQueryData, UpdateTicketStatusData } from '../data/ticket.data';
 import { AppError } from '../lib/app-error';
 import { logger } from '../lib/logger';
@@ -10,26 +11,61 @@ import { RuleBasedTicketClassifier } from './rule-based-ticket-classifier';
 export class TicketService {
   constructor(
     private readonly prismaClient: PrismaClient = prisma,
-    private readonly classifier: ITicketClassifier = new RuleBasedTicketClassifier()
+    private readonly classifier: ITicketClassifier = new RuleBasedTicketClassifier(),
+    private readonly dispatcher: ITicketClassificationDispatcher = new NoopTicketClassificationDispatcher()
   ) {}
 
   async create(data: CreateTicketData): Promise<Ticket> {
     await this.ensureUserExists(data.userId);
 
-    const classification = await this.classifier.classify(data.requestText);
-    const normalizedClassification = normalizeClassificationResult(classification);
-
-    logManualReviewPromotion(data.userId, classification, normalizedClassification);
-
-    return this.prismaClient.ticket.create({
+    const ticket = await this.prismaClient.ticket.create({
       data: {
         userId: data.userId,
         requestText: data.requestText,
+        status: 'EM_ANALISE',
+        channel: null,
+        priority: null,
+        manualReview: false,
+        classificationConfidence: null,
+        classificationAlternatives: []
+      }
+    });
+
+    await this.dispatcher.enqueue(ticket.id);
+
+    logger.info(
+      {
+        action: 'enqueue_ticket_classification',
+        ticketId: ticket.id,
+        userId: ticket.userId
+      },
+      'Ticket classification job enqueued'
+    );
+
+    return ticket;
+  }
+
+  async processClassification(id: number): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (hasClassificationResult(ticket)) {
+      return ticket;
+    }
+
+    const classification = await this.classifier.classify(ticket.requestText);
+    const normalizedClassification = normalizeClassificationResult(classification);
+
+    logManualReviewPromotion(ticket.userId, classification, normalizedClassification);
+
+    return this.prismaClient.ticket.update({
+      where: { id },
+      data: {
         channel: normalizedClassification.channel,
         priority: normalizedClassification.priority,
         manualReview: normalizedClassification.manualReview,
         classificationConfidence: normalizedClassification.confidence,
-        classificationAlternatives: normalizedClassification.alternatives
+        classificationAlternatives: normalizedClassification.alternatives,
+        status: normalizedClassification.manualReview ? 'EM_ANALISE' : 'ABERTO'
       }
     });
   }
@@ -73,6 +109,10 @@ export class TicketService {
       throw new AppError('User not found', 404);
     }
   }
+}
+
+function hasClassificationResult(ticket: Ticket): boolean {
+  return ticket.channel !== null && ticket.priority !== null && ticket.classificationConfidence !== null;
 }
 
 function normalizeClassificationResult(classification: ClassificationResult): ClassificationResult {

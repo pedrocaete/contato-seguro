@@ -3,23 +3,17 @@ import { Worker } from 'bullmq';
 import { env } from '../lib/env';
 import { logger } from '../lib/logger';
 import { createRedisConnectionOptions } from '../lib/redis';
+import { prisma } from '../lib/prisma';
 import { TicketClassificationJobData, ticketClassificationQueueName } from '../queues/ticket-classification.queue';
+import { createTicketClassifier } from '../services/create-ticket-classifier';
+import { TicketService } from '../services/ticket.service';
+import { createTicketClassificationWorkerHandler } from './ticket-classification.worker-handler';
+
+const ticketService = new TicketService(prisma, createTicketClassifier());
 
 const worker = new Worker<TicketClassificationJobData>(
   ticketClassificationQueueName,
-  async (job) => {
-    logger.warn(
-      {
-        action: 'process_ticket_classification_job',
-        queue: ticketClassificationQueueName,
-        jobId: job.id,
-        ticketId: job.data.ticketId
-      },
-      'Ticket classification worker scaffold is active, but processing is not implemented yet'
-    );
-
-    throw new Error('Ticket classification worker phase 1 scaffold only');
-  },
+  createTicketClassificationWorkerHandler(ticketService),
   {
     connection: createRedisConnectionOptions()
   }

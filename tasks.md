@@ -63,13 +63,15 @@ Objetivo: substituir a classificacao local por uma integracao real sem retrabalh
 
 ## Etapa 5 - Fila de classificacao assíncrona
 
-Objetivo: preparar a infraestrutura de fila para migrar a classificacao de tickets para processamento assincrono sem ainda alterar o contrato HTTP atual.
+Objetivo: migrar o fluxo de criacao e classificacao de tickets para processamento assincrono, preservando o contrato principal da API.
 
 - [x] Adicionar Redis ao `docker-compose.yml` e documentar as variaveis de ambiente da fila.
 - [x] Instalar `bullmq` e `ioredis` e criar a infraestrutura base de conexao, fila e worker dedicado.
-- [x] Criar o scaffold operacional do worker de classificacao de tickets, com logs estruturados de inicializacao, falha e encerramento.
-- [x] Manter o `POST /tickets` sincronico nesta fase 1, documentando que o enfileiramento real e a atualizacao assíncrona do status entram na fase seguinte.
-- [x] Garantir que a suite de testes e o build continuem estaveis com a nova infraestrutura presente no projeto.
+- [x] Criar o scaffold operacional inicial do worker de classificacao de tickets, com logs estruturados de inicializacao, falha e encerramento.
+- [x] Tornar os campos de classificacao do `Ticket` compativeis com estado pendente, permitindo criacao antes da resposta da IA.
+- [x] Alterar o `POST /tickets` para criar o ticket em `EM_ANALISE` e enfileirar o job de classificacao.
+- [x] Implementar o processamento real do job no worker, com classificacao, atualizacao do ticket e promocao para `ABERTO` ou manutencao em `EM_ANALISE`.
+- [x] Cobrir o novo fluxo com testes unitarios e de integracao e manter o build estavel.
 
 ## Ordem de execucao
 

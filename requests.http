@@ -32,7 +32,7 @@ Content-Type: application/json
 ### Remover usuario
 DELETE {{baseUrl}}/users/{{userId}}
 
-### Criar ticket classificado como SAC
+### Criar ticket e enfileirar classificacao assíncrona
 POST {{baseUrl}}/tickets
 Content-Type: application/json
 
@@ -41,7 +41,7 @@ Content-Type: application/json
   "requestText": "Meu produto nao chegou e quero cancelar a assinatura."
 }
 
-### Criar ticket classificado como OUVIDORIA
+### Criar ticket com texto de OUVIDORIA
 POST {{baseUrl}}/tickets
 Content-Type: application/json
 
@@ -50,7 +50,7 @@ Content-Type: application/json
   "requestText": "Quero denunciar fraude e assedio no atendimento."
 }
 
-### Criar ticket ambiguo para revisao manual
+### Criar ticket ambiguo para revisao manual apos processamento
 POST {{baseUrl}}/tickets
 Content-Type: application/json
 
@@ -65,7 +65,7 @@ GET {{baseUrl}}/tickets
 ### Listar tickets com filtros
 GET {{baseUrl}}/tickets?userId=1&status=ABERTO&channel=SAC
 
-### Buscar ticket por id
+### Buscar ticket por id depois do worker processar
 GET {{baseUrl}}/tickets/{{ticketId}}
 
 ### Atualizar status do ticket

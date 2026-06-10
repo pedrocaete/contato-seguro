@@ -3,31 +3,28 @@ import { mockDeep } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 
 import { AppError } from '../../src/lib/app-error';
+import { ITicketClassificationDispatcher } from '../../src/queues/ticket-classification-dispatcher';
 import { ITicketClassifier } from '../../src/services/ticket-classifier';
 import { TicketService } from '../../src/services/ticket.service';
 
 describe('TicketService', () => {
   const prismaMock = mockDeep<PrismaClient>();
+  const dispatcherMock: jest.Mocked<ITicketClassificationDispatcher> = {
+    enqueue: jest.fn()
+  };
   const classifierMock: jest.Mocked<ITicketClassifier> = {
     classify: jest.fn()
   };
-  const service = new TicketService(prismaMock, classifierMock);
+  const service = new TicketService(prismaMock, classifierMock, dispatcherMock);
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('creates a ticket with classification', async () => {
-    const ticket = createTicket();
+  it('creates a ticket pending classification and enqueues a job', async () => {
+    const ticket = createPendingTicket();
 
     prismaMock.user.findUnique.mockResolvedValue(createUser());
-    classifierMock.classify.mockResolvedValue({
-      channel: 'SAC',
-      priority: 'MEDIA',
-      manualReview: false,
-      confidence: 0.86,
-      alternatives: []
-    });
     prismaMock.ticket.create.mockResolvedValue(ticket);
 
     const result = await service.create({
@@ -35,54 +32,57 @@ describe('TicketService', () => {
       requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
     });
 
-    expect(classifierMock.classify).toHaveBeenCalledWith(
-      'Meu produto nao chegou e quero cancelar a assinatura.'
-    );
+    expect(classifierMock.classify).not.toHaveBeenCalled();
     expect(prismaMock.ticket.create).toHaveBeenCalledWith({
       data: {
         userId: 1,
         requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
+        status: 'EM_ANALISE',
+        channel: null,
+        priority: null,
+        manualReview: false,
+        classificationConfidence: null,
+        classificationAlternatives: []
+      }
+    });
+    expect(dispatcherMock.enqueue).toHaveBeenCalledWith(1);
+    expect(result).toEqual(ticket);
+  });
+
+  it('processes ticket classification and opens the ticket when no manual review is needed', async () => {
+    const ticket = createClassifiedTicket();
+
+    prismaMock.ticket.findUnique.mockResolvedValue(createPendingTicket());
+    classifierMock.classify.mockResolvedValue({
+      channel: 'SAC',
+      priority: 'MEDIA',
+      manualReview: false,
+      confidence: 0.86,
+      alternatives: []
+    });
+    prismaMock.ticket.update.mockResolvedValue(ticket);
+
+    const result = await service.processClassification(1);
+
+    expect(classifierMock.classify).toHaveBeenCalledWith(
+      'Meu produto nao chegou e quero cancelar a assinatura.'
+    );
+    expect(prismaMock.ticket.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
         channel: 'SAC',
         priority: 'MEDIA',
         manualReview: false,
         classificationConfidence: 0.86,
-        classificationAlternatives: []
+        classificationAlternatives: [],
+        status: 'ABERTO'
       }
     });
     expect(result).toEqual(ticket);
   });
 
-  it('marks manual review when confidence is below the threshold', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(createUser());
-    classifierMock.classify.mockResolvedValue({
-      channel: 'SAC',
-      priority: 'MEDIA',
-      manualReview: false,
-      confidence: 0.6,
-      alternatives: []
-    });
-    prismaMock.ticket.create.mockResolvedValue({
-      ...createTicket(),
-      manualReview: true,
-      classificationConfidence: 0.6
-    });
-
-    await service.create({
-      userId: 1,
-      requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
-    });
-
-    expect(prismaMock.ticket.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        manualReview: true,
-        classificationConfidence: 0.6,
-        classificationAlternatives: []
-      })
-    });
-  });
-
-  it('marks manual review when alternatives are present', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(createUser());
+  it('keeps the ticket in analysis when manual review is required after classification', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(createPendingTicket());
     classifierMock.classify.mockResolvedValue({
       channel: 'SAC',
       priority: 'MEDIA',
@@ -90,23 +90,33 @@ describe('TicketService', () => {
       confidence: 0.9,
       alternatives: ['FINANCEIRO']
     });
-    prismaMock.ticket.create.mockResolvedValue({
-      ...createTicket(),
+    prismaMock.ticket.update.mockResolvedValue({
+      ...createClassifiedTicket(),
       manualReview: true,
-      classificationAlternatives: ['FINANCEIRO']
+      classificationAlternatives: ['FINANCEIRO'],
+      status: 'EM_ANALISE'
     });
 
-    await service.create({
-      userId: 1,
-      requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
-    });
+    await service.processClassification(1);
 
-    expect(prismaMock.ticket.create).toHaveBeenCalledWith({
+    expect(prismaMock.ticket.update).toHaveBeenCalledWith({
+      where: { id: 1 },
       data: expect.objectContaining({
         manualReview: true,
-        classificationAlternatives: ['FINANCEIRO']
+        classificationAlternatives: ['FINANCEIRO'],
+        status: 'EM_ANALISE'
       })
     });
+  });
+
+  it('does not classify an already processed ticket again', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(createClassifiedTicket());
+
+    const result = await service.processClassification(1);
+
+    expect(classifierMock.classify).not.toHaveBeenCalled();
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+    expect(result).toEqual(createClassifiedTicket());
   });
 
   it('fails when creating a ticket for a non-existing user', async () => {
@@ -121,7 +131,7 @@ describe('TicketService', () => {
   });
 
   it('returns all tickets', async () => {
-    prismaMock.ticket.findMany.mockResolvedValue([createTicket()]);
+    prismaMock.ticket.findMany.mockResolvedValue([createClassifiedTicket()]);
 
     const result = await service.findAll({});
 
@@ -135,7 +145,7 @@ describe('TicketService', () => {
   });
 
   it('returns filtered tickets', async () => {
-    prismaMock.ticket.findMany.mockResolvedValue([createTicket()]);
+    prismaMock.ticket.findMany.mockResolvedValue([createClassifiedTicket()]);
 
     await service.findAll({
       userId: 1,
@@ -156,7 +166,7 @@ describe('TicketService', () => {
   });
 
   it('returns a ticket by id', async () => {
-    prismaMock.ticket.findUnique.mockResolvedValue(createTicket());
+    prismaMock.ticket.findUnique.mockResolvedValue(createClassifiedTicket());
 
     const result = await service.findById(1);
 
@@ -173,9 +183,9 @@ describe('TicketService', () => {
   });
 
   it('updates ticket status', async () => {
-    prismaMock.ticket.findUnique.mockResolvedValue(createTicket());
+    prismaMock.ticket.findUnique.mockResolvedValue(createClassifiedTicket());
     prismaMock.ticket.update.mockResolvedValue({
-      ...createTicket(),
+      ...createClassifiedTicket(),
       status: 'EM_ANALISE'
     });
 
@@ -210,6 +220,26 @@ function createUser(): User {
 }
 
 function createTicket(): Ticket {
+  return createClassifiedTicket();
+}
+
+function createPendingTicket(): Ticket {
+  return {
+    id: 1,
+    userId: 1,
+    requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
+    channel: null,
+    status: 'EM_ANALISE' satisfies TicketStatus,
+    priority: null,
+    manualReview: false,
+    classificationConfidence: null,
+    classificationAlternatives: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+}
+
+function createClassifiedTicket(): Ticket {
   return {
     id: 1,
     userId: 1,

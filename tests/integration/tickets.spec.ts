@@ -4,15 +4,15 @@ import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 
 const prismaMock = mockDeep<PrismaClient>();
-const classifyMock = jest.fn();
+const enqueueMock = jest.fn();
 
 jest.mock('../../src/lib/prisma', () => ({
   prisma: prismaMock
 }));
 
-jest.mock('../../src/services/create-ticket-classifier', () => ({
-  createTicketClassifier: () => ({
-    classify: classifyMock
+jest.mock('../../src/queues/ticket-classification-dispatcher', () => ({
+  createTicketClassificationDispatcher: () => ({
+    enqueue: enqueueMock
   })
 }));
 
@@ -21,13 +21,7 @@ import { app } from '../../src/app';
 describe('Ticket routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    classifyMock.mockResolvedValue({
-      channel: 'SAC',
-      priority: 'MEDIA',
-      manualReview: false,
-      confidence: 0.9,
-      alternatives: []
-    });
+    enqueueMock.mockResolvedValue(undefined);
   });
 
   it('creates a ticket', async () => {
@@ -42,11 +36,11 @@ describe('Ticket routes', () => {
       id: 1,
       userId: 1,
       requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
-      channel: 'SAC',
-      status: 'ABERTO',
-      priority: 'MEDIA',
+      channel: null,
+      status: 'EM_ANALISE',
+      priority: null,
       manualReview: false,
-      classificationConfidence: 0.86,
+      classificationConfidence: null,
       classificationAlternatives: [],
       createdAt: new Date(),
       updatedAt: new Date()
@@ -62,19 +56,21 @@ describe('Ticket routes', () => {
       data: {
         userId: 1,
         requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
-        channel: 'SAC',
-        priority: 'MEDIA',
+        status: 'EM_ANALISE',
+        channel: null,
+        priority: null,
         manualReview: false,
-        classificationConfidence: 0.9,
+        classificationConfidence: null,
         classificationAlternatives: []
       }
     });
+    expect(enqueueMock).toHaveBeenCalledWith(1);
     expect(response.body).toEqual(
       expect.objectContaining({
         id: 1,
         userId: 1,
-        channel: 'SAC',
-        status: 'ABERTO'
+        channel: null,
+        status: 'EM_ANALISE'
       })
     );
   });

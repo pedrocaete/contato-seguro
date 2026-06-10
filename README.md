@@ -7,7 +7,7 @@ API de triagem de tickets com foco em padronização de backend, validação, lo
 Este repositório concentra as diretrizes arquiteturais e operacionais do projeto. O objetivo é manter a API previsível, testável e consistente mesmo sob crescimento de carga.
 
 O ambiente de desenvolvimento foi preparado para rodar via Docker, com aplicação Node.js e PostgreSQL em containers separados.
-Também existe a infraestrutura inicial da fila com Redis e um worker dedicado para a futura classificação assíncrona de tickets.
+A classificação de tickets agora roda de forma assíncrona com Redis, BullMQ e um worker dedicado.
 
 ## Configuração de ambiente
 
@@ -90,14 +90,19 @@ Containers padrão:
 
 ## Fila
 
-A fase 1 da fila já está estruturada com:
+O fluxo assíncrono de tickets funciona assim:
+
+1. `POST /tickets` cria o ticket com `status: EM_ANALISE`.
+2. O backend enfileira um job de classificação no Redis via BullMQ.
+3. O worker consome o job, chama o classificador configurado e atualiza o ticket no banco.
+4. O ticket vai para `ABERTO` quando a classificação é conclusiva.
+5. O ticket permanece em `EM_ANALISE` quando a classificação exigir revisão manual.
+
+Componentes usados:
 
 - Redis no Docker Compose
 - BullMQ como biblioteca de fila
 - worker dedicado para classificação de tickets
-
-Nesta etapa, a infraestrutura da fila já sobe com o ambiente, mas o `POST /tickets` ainda continua síncrono.
-O worker foi criado como scaffold operacional e o processamento real do job entra na próxima fase.
 
 ## Como testar
 
@@ -194,6 +199,26 @@ Exemplo de resposta:
   "id": 1,
   "userId": 1,
   "requestText": "Meu produto nao chegou e quero cancelar a assinatura.",
+  "channel": null,
+  "status": "EM_ANALISE",
+  "priority": null,
+  "manualReview": false,
+  "classificationConfidence": null,
+  "classificationAlternatives": [],
+  "createdAt": "2026-06-10T00:00:00.000Z",
+  "updatedAt": "2026-06-10T00:00:00.000Z"
+}
+```
+
+Depois que o worker processar a fila, o mesmo ticket passa a refletir a classificação concluída.
+
+Exemplo de resposta após o processamento assíncrono:
+
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "requestText": "Meu produto nao chegou e quero cancelar a assinatura.",
   "channel": "SAC",
   "status": "ABERTO",
   "priority": "MEDIA",
@@ -201,7 +226,7 @@ Exemplo de resposta:
   "classificationConfidence": 0.9,
   "classificationAlternatives": [],
   "createdAt": "2026-06-10T00:00:00.000Z",
-  "updatedAt": "2026-06-10T00:00:00.000Z"
+  "updatedAt": "2026-06-10T00:00:03.000Z"
 }
 ```
 
@@ -231,7 +256,7 @@ Exemplo de resposta com revisão manual:
   "userId": 1,
   "requestText": "Tenho erro e cobranca indevida.",
   "channel": "SUPORTE_TECNICO",
-  "status": "ABERTO",
+  "status": "EM_ANALISE",
   "priority": "MEDIA",
   "manualReview": true,
   "classificationConfidence": 0.55,
