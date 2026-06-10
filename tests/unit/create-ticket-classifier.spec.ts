@@ -6,7 +6,9 @@ describe('createTicketClassifier', () => {
   it('returns the local classifier when the provider is rule_based', () => {
     const classifier = createTicketClassifier({
       TICKET_CLASSIFIER_PROVIDER: 'rule_based',
-      GEMINI_MODEL: 'gemini-2.5-flash'
+      GEMINI_MODEL: 'gemini-2.5-flash',
+      GEMINI_TIMEOUT_MS: 5000,
+      GEMINI_MAX_RETRIES: 1
     });
 
     expect(classifier).toBeInstanceOf(RuleBasedTicketClassifier);
@@ -16,7 +18,9 @@ describe('createTicketClassifier', () => {
     const classifier = createTicketClassifier({
       TICKET_CLASSIFIER_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
-      GEMINI_MODEL: 'gemini-2.5-flash'
+      GEMINI_MODEL: 'gemini-2.5-flash',
+      GEMINI_TIMEOUT_MS: 5000,
+      GEMINI_MAX_RETRIES: 1
     });
 
     expect(classifier).toBeInstanceOf(GeminiTicketClassifier);

@@ -2,6 +2,7 @@ import { PrismaClient, Ticket } from '@prisma/client';
 
 import { CreateTicketData, ListTicketsQueryData, UpdateTicketStatusData } from '../data/ticket.data';
 import { AppError } from '../lib/app-error';
+import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { classificationConfidenceThreshold, ClassificationResult, ITicketClassifier } from './ticket-classifier';
 import { RuleBasedTicketClassifier } from './rule-based-ticket-classifier';
@@ -15,17 +16,21 @@ export class TicketService {
   async create(data: CreateTicketData): Promise<Ticket> {
     await this.ensureUserExists(data.userId);
 
-    const classification = normalizeClassificationResult(await this.classifier.classify(data.requestText));
+    const normalizedClassification = normalizeClassificationResult(
+      await this.classifier.classify(data.requestText)
+    );
+
+    logManualReviewPromotion(data.userId, normalizedClassification);
 
     return this.prismaClient.ticket.create({
       data: {
         userId: data.userId,
         requestText: data.requestText,
-        channel: classification.channel,
-        priority: classification.priority,
-        manualReview: classification.manualReview,
-        classificationConfidence: classification.confidence,
-        classificationAlternatives: classification.alternatives
+        channel: normalizedClassification.channel,
+        priority: normalizedClassification.priority,
+        manualReview: normalizedClassification.manualReview,
+        classificationConfidence: normalizedClassification.confidence,
+        classificationAlternatives: normalizedClassification.alternatives
       }
     });
   }
@@ -90,4 +95,46 @@ function deduplicateAlternativeChannels(
   alternatives: ClassificationResult['alternatives']
 ): ClassificationResult['alternatives'] {
   return [...new Set(alternatives)].filter((alternative) => alternative !== channel);
+}
+
+function logManualReviewPromotion(
+  userId: number,
+  classification: ClassificationResult
+): void {
+  if (!classification.manualReview) {
+    return;
+  }
+
+  const reasons = getManualReviewReasons(classification);
+
+  logger.info(
+    {
+      action: 'classify_ticket',
+      userId,
+      channel: classification.channel,
+      priority: classification.priority,
+      confidence: classification.confidence,
+      alternatives: classification.alternatives,
+      manualReviewReasons: reasons
+    },
+    'Ticket promoted to manual review'
+  );
+}
+
+function getManualReviewReasons(classification: ClassificationResult): string[] {
+  const reasons: string[] = [];
+
+  if (classification.confidence < classificationConfidenceThreshold) {
+    reasons.push('low_confidence');
+  }
+
+  if (classification.alternatives.length > 0) {
+    reasons.push('has_alternatives');
+  }
+
+  if (classification.manualReview) {
+    reasons.push('classifier_flagged_review');
+  }
+
+  return reasons;
 }

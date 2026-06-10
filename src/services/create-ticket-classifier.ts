@@ -7,6 +7,8 @@ type TicketClassifierSettings = {
   TICKET_CLASSIFIER_PROVIDER: 'rule_based' | 'gemini';
   GEMINI_API_KEY?: string;
   GEMINI_MODEL: string;
+  GEMINI_TIMEOUT_MS: number;
+  GEMINI_MAX_RETRIES: number;
 };
 
 export function createTicketClassifier(
@@ -18,5 +20,11 @@ export function createTicketClassifier(
     return fallback;
   }
 
-  return GeminiTicketClassifier.create(settings.GEMINI_API_KEY!, settings.GEMINI_MODEL, fallback);
+  return GeminiTicketClassifier.create(
+    settings.GEMINI_API_KEY!,
+    settings.GEMINI_MODEL,
+    fallback,
+    settings.GEMINI_TIMEOUT_MS,
+    settings.GEMINI_MAX_RETRIES
+  );
 }

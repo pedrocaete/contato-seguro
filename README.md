@@ -18,6 +18,8 @@ Variáveis principais:
 - `TICKET_CLASSIFIER_PROVIDER`: `rule_based` ou `gemini`.
 - `GEMINI_MODEL`: modelo usado quando o provider for `gemini`.
 - `GEMINI_API_KEY`: obrigatória quando `TICKET_CLASSIFIER_PROVIDER=gemini`.
+- `GEMINI_TIMEOUT_MS`: timeout por tentativa da chamada ao Gemini.
+- `GEMINI_MAX_RETRIES`: número de novas tentativas antes de cair no fallback local.
 
 ## Tecnologias
 

@@ -29,43 +29,118 @@ export class GeminiTicketClassifier implements ITicketClassifier {
   constructor(
     private readonly model: string,
     private readonly client: GenerateContentClient,
-    private readonly fallback: ITicketClassifier
+    private readonly fallback: ITicketClassifier,
+    private readonly timeoutMs: number,
+    private readonly maxRetries: number
   ) {}
 
   static create(
     apiKey: string,
     model: string,
-    fallback: ITicketClassifier
+    fallback: ITicketClassifier,
+    timeoutMs: number,
+    maxRetries: number
   ): GeminiTicketClassifier {
-    return new GeminiTicketClassifier(model, new GoogleGenAI({ apiKey }).models, fallback);
+    return new GeminiTicketClassifier(
+      model,
+      new GoogleGenAI({ apiKey }).models,
+      fallback,
+      timeoutMs,
+      maxRetries
+    );
   }
 
   async classify(text: string): Promise<ClassificationResult> {
-    try {
-      const response = await this.client.generateContent({
-        model: this.model,
-        contents: buildClassificationPrompt(text),
-        config: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: classificationResponseJsonSchema
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      try {
+        const response = await withTimeout(
+          this.client.generateContent({
+            model: this.model,
+            contents: buildClassificationPrompt(text),
+            config: {
+              responseMimeType: 'application/json',
+              responseJsonSchema: classificationResponseJsonSchema
+            }
+          }),
+          this.timeoutMs
+        );
+
+        const classification = parseClassificationResult(response.text);
+
+        logger.info(
+          {
+            action: 'classify_ticket',
+            external_system: 'google_genai',
+            model: this.model,
+            attempt: attempt + 1,
+            channel: classification.channel,
+            priority: classification.priority,
+            manualReview: classification.manualReview,
+            confidence: classification.confidence,
+            alternatives: classification.alternatives
+          },
+          'Ticket classified with Gemini'
+        );
+
+        return classification;
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < this.maxRetries) {
+          logger.warn(
+            {
+              action: 'classify_ticket',
+              external_system: 'google_genai',
+              model: this.model,
+              attempt: attempt + 1,
+              maxRetries: this.maxRetries,
+              err: error
+            },
+            'Gemini classification attempt failed, retrying'
+          );
         }
-      });
-
-      return parseClassificationResult(response.text);
-    } catch (error) {
-      logger.warn(
-        {
-          action: 'classify_ticket',
-          external_system: 'google_genai',
-          model: this.model,
-          err: error
-        },
-        'Gemini classification failed, using rule-based fallback'
-      );
-
-      return this.fallback.classify(text);
+      }
     }
+
+    logger.warn(
+      {
+        action: 'classify_ticket',
+        external_system: 'google_genai',
+        model: this.model,
+        maxRetries: this.maxRetries,
+        err: lastError
+      },
+      'Gemini classification failed, using rule-based fallback'
+    );
+
+    return this.fallback.classify(text);
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Gemini classification timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    try {
+      promise.then(
+        (value) => {
+          clearTimeout(timeoutId);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
+      );
+    } catch (error) {
+      clearTimeout(timeoutId);
+      reject(error);
+    }
+  });
 }
 
 function buildClassificationPrompt(text: string): string {

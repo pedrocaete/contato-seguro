@@ -10,7 +10,9 @@ const envSchema = z
     DATABASE_URL: z.string().min(1).optional(),
     TICKET_CLASSIFIER_PROVIDER: z.enum(['rule_based', 'gemini']).default('rule_based'),
     GEMINI_API_KEY: z.string().min(1).optional(),
-    GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash')
+    GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+    GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+    GEMINI_MAX_RETRIES: z.coerce.number().int().min(0).default(1)
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV !== 'test' && !data.DATABASE_URL) {

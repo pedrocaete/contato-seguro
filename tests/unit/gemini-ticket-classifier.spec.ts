@@ -11,7 +11,7 @@ describe('GeminiTicketClassifier', () => {
     generateContent: jest.fn()
   };
 
-  const classifier = new GeminiTicketClassifier('gemini-2.5-flash', client, fallback);
+  const classifier = new GeminiTicketClassifier('gemini-2.5-flash', client, fallback, 50, 1);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -121,6 +121,40 @@ describe('GeminiTicketClassifier', () => {
       manualReview: true,
       confidence: 0.55,
       alternatives: ['FINANCEIRO']
+    });
+  });
+
+  it('retries before using the fallback', async () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation();
+
+    client.generateContent
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce({
+        text: JSON.stringify({
+          channel: 'SAC',
+          priority: 'MEDIA',
+          manualReview: false,
+          confidence: 0.84,
+          alternatives: []
+        })
+      });
+
+    const result = await classifier.classify('Meu produto nao chegou e quero cancelar a assinatura.');
+
+    expect(client.generateContent).toHaveBeenCalledTimes(2);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attempt: 1,
+        maxRetries: 1
+      }),
+      'Gemini classification attempt failed, retrying'
+    );
+    expect(result).toEqual({
+      channel: 'SAC',
+      priority: 'MEDIA',
+      manualReview: false,
+      confidence: 0.84,
+      alternatives: []
     });
   });
 });
