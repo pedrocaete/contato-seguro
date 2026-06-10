@@ -71,6 +71,7 @@ Objetivo: migrar o fluxo de criacao e classificacao de tickets para processament
 - [x] Tornar os campos de classificacao do `Ticket` compativeis com estado pendente, permitindo criacao antes da resposta da IA.
 - [x] Alterar o `POST /tickets` para criar o ticket em `EM_ANALISE` e enfileirar o job de classificacao.
 - [x] Implementar o processamento real do job no worker, com classificacao, atualizacao do ticket e promocao para `ABERTO` ou manutencao em `EM_ANALISE`.
+- [x] Definir fallback operacional para job esgotado: ticket segue para revisao manual quando todas as tentativas da fila falharem.
 - [x] Cobrir o novo fluxo com testes unitarios e de integracao e manter o build estavel.
 
 ## Ordem de execucao

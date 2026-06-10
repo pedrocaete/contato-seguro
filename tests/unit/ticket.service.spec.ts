@@ -119,6 +119,40 @@ describe('TicketService', () => {
     expect(result).toEqual(createClassifiedTicket());
   });
 
+  it('marks a pending ticket for manual review when async classification fails permanently', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(createPendingTicket());
+    prismaMock.ticket.update.mockResolvedValue({
+      ...createPendingTicket(),
+      manualReview: true,
+      classificationConfidence: 0,
+      status: 'EM_ANALISE'
+    });
+
+    const result = await service.markClassificationFailureForManualReview(1);
+
+    expect(prismaMock.ticket.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        manualReview: true,
+        classificationConfidence: 0,
+        classificationAlternatives: [],
+        status: 'EM_ANALISE'
+      }
+    });
+    expect(result.manualReview).toBe(true);
+  });
+
+  it('does not update a ticket that is already classified when marking manual review after queue failure', async () => {
+    const ticket = createClassifiedTicket();
+
+    prismaMock.ticket.findUnique.mockResolvedValue(ticket);
+
+    const result = await service.markClassificationFailureForManualReview(1);
+
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+    expect(result).toEqual(ticket);
+  });
+
   it('fails when creating a ticket for a non-existing user', async () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
 

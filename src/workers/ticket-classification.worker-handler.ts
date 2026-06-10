@@ -38,3 +38,40 @@ export function createTicketClassificationWorkerHandler(ticketService: TicketSer
     }
   };
 }
+
+export function createTicketClassificationFailedHandler(ticketService: TicketService) {
+  return async (job: Job<TicketClassificationJobData> | undefined, error: Error): Promise<void> => {
+    logger.warn(
+      {
+        action: 'queue_job_failed',
+        queue: ticketClassificationQueueName,
+        jobId: job?.id,
+        ticketId: job?.data.ticketId,
+        err: error
+      },
+      'Ticket classification job failed'
+    );
+
+    if (!job || !hasExhaustedAllAttempts(job)) {
+      return;
+    }
+
+    await ticketService.markClassificationFailureForManualReview(job.data.ticketId);
+
+    logger.warn(
+      {
+        action: 'queue_job_manual_review_fallback',
+        queue: ticketClassificationQueueName,
+        jobId: job.id,
+        ticketId: job.data.ticketId
+      },
+      'Ticket moved to manual review after queue retries were exhausted'
+    );
+  };
+}
+
+function hasExhaustedAllAttempts(job: Job<TicketClassificationJobData>): boolean {
+  const configuredAttempts = typeof job.opts.attempts === 'number' ? job.opts.attempts : 1;
+
+  return job.attemptsMade >= configuredAttempts;
+}

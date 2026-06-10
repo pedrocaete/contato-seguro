@@ -7,7 +7,10 @@ import { prisma } from '../lib/prisma';
 import { TicketClassificationJobData, ticketClassificationQueueName } from '../queues/ticket-classification.queue';
 import { createTicketClassifier } from '../services/create-ticket-classifier';
 import { TicketService } from '../services/ticket.service';
-import { createTicketClassificationWorkerHandler } from './ticket-classification.worker-handler';
+import {
+  createTicketClassificationFailedHandler,
+  createTicketClassificationWorkerHandler
+} from './ticket-classification.worker-handler';
 
 const ticketService = new TicketService(prisma, createTicketClassifier());
 
@@ -30,18 +33,7 @@ worker.on('ready', () => {
   );
 });
 
-worker.on('failed', (job, error) => {
-  logger.warn(
-    {
-      action: 'queue_job_failed',
-      queue: ticketClassificationQueueName,
-      jobId: job?.id,
-      ticketId: job?.data.ticketId,
-      err: error
-    },
-    'Ticket classification job failed'
-  );
-});
+worker.on('failed', createTicketClassificationFailedHandler(ticketService));
 
 function shutdown(signal: string): void {
   logger.info(

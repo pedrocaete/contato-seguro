@@ -87,6 +87,24 @@ export class TicketService {
     });
   }
 
+  async markClassificationFailureForManualReview(id: number): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (hasClassificationResult(ticket)) {
+      return ticket;
+    }
+
+    return this.prismaClient.ticket.update({
+      where: { id },
+      data: {
+        manualReview: true,
+        classificationConfidence: 0,
+        classificationAlternatives: [],
+        status: 'EM_ANALISE'
+      }
+    });
+  }
+
   async findAll(filters: ListTicketsQueryData): Promise<Ticket[]> {
     return this.prismaClient.ticket.findMany({
       where: filters,

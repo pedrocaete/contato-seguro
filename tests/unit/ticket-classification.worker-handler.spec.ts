@@ -1,5 +1,8 @@
 import { AppError } from '../../src/lib/app-error';
-import { createTicketClassificationWorkerHandler } from '../../src/workers/ticket-classification.worker-handler';
+import {
+  createTicketClassificationFailedHandler,
+  createTicketClassificationWorkerHandler
+} from '../../src/workers/ticket-classification.worker-handler';
 
 describe('ticket classification worker handler', () => {
   it('processes a queued ticket classification job', async () => {
@@ -50,5 +53,55 @@ describe('ticket classification worker handler', () => {
         }
       } as never)
     ).rejects.toThrow('Gemini unavailable');
+  });
+
+  it('marks the ticket for manual review when the queue exhausts all retry attempts', async () => {
+    const ticketService = {
+      markClassificationFailureForManualReview: jest.fn().mockResolvedValue(undefined)
+    };
+    const failedHandler = createTicketClassificationFailedHandler(ticketService as never);
+
+    await expect(
+      failedHandler(
+        {
+          id: '1',
+          attemptsMade: 3,
+          data: {
+            ticketId: 42
+          },
+          opts: {
+            attempts: 3
+          }
+        } as never,
+        new Error('Gemini unavailable')
+      )
+    ).resolves.toBeUndefined();
+
+    expect(ticketService.markClassificationFailureForManualReview).toHaveBeenCalledWith(42);
+  });
+
+  it('does not mark manual review while the queue still has retry attempts left', async () => {
+    const ticketService = {
+      markClassificationFailureForManualReview: jest.fn().mockResolvedValue(undefined)
+    };
+    const failedHandler = createTicketClassificationFailedHandler(ticketService as never);
+
+    await expect(
+      failedHandler(
+        {
+          id: '1',
+          attemptsMade: 1,
+          data: {
+            ticketId: 42
+          },
+          opts: {
+            attempts: 3
+          }
+        } as never,
+        new Error('Gemini unavailable')
+      )
+    ).resolves.toBeUndefined();
+
+    expect(ticketService.markClassificationFailureForManualReview).not.toHaveBeenCalled();
   });
 });

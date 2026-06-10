@@ -97,6 +97,7 @@ O fluxo assíncrono de tickets funciona assim:
 3. O worker consome o job, chama o classificador configurado e atualiza o ticket no banco.
 4. O ticket vai para `ABERTO` quando a classificação é conclusiva.
 5. O ticket permanece em `EM_ANALISE` quando a classificação exigir revisão manual.
+6. Se a fila esgotar todas as tentativas do job, o ticket cai para revisão manual como fallback operacional.
 
 Componentes usados:
 
