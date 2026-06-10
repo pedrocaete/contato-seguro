@@ -81,7 +81,7 @@ function buildClassificationPrompt(text: string): string {
     '- SUPORTE_TECNICO: erro, acesso, bug, falha, instabilidade, sistema',
     '- FINANCEIRO: cobranca, pagamento, reembolso, fatura',
     '- FORA_DO_ESCOPO: mensagens vagas, sem contexto suficiente ou fora do cenario',
-    'Return exactly this shape: {"channel":"SAC","priority":"MEDIA","manualReview":false}.',
+    'Return exactly this shape: {"channel":"SAC","priority":"MEDIA","manualReview":false,"confidence":0.84,"alternatives":["FINANCEIRO"]}.',
     `Ticket text: """${text}"""`
   ].join('\n');
 }

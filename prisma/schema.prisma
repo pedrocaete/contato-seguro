@@ -38,16 +38,18 @@ model User {
 }
 
 model Ticket {
-  id           Int            @id @default(autoincrement())
-  userId       Int
-  requestText  String
-  channel      TicketChannel
-  status       TicketStatus   @default(ABERTO)
-  priority     TicketPriority
-  manualReview Boolean        @default(false)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                         Int            @id @default(autoincrement())
+  userId                     Int
+  requestText                String
+  channel                    TicketChannel
+  status                     TicketStatus   @default(ABERTO)
+  priority                   TicketPriority
+  manualReview               Boolean        @default(false)
+  classificationConfidence   Float
+  classificationAlternatives TicketChannel[]
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  user                       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])

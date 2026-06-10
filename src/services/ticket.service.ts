@@ -3,7 +3,7 @@ import { PrismaClient, Ticket } from '@prisma/client';
 import { CreateTicketData, ListTicketsQueryData, UpdateTicketStatusData } from '../data/ticket.data';
 import { AppError } from '../lib/app-error';
 import { prisma } from '../lib/prisma';
-import { ITicketClassifier } from './ticket-classifier';
+import { classificationConfidenceThreshold, ClassificationResult, ITicketClassifier } from './ticket-classifier';
 import { RuleBasedTicketClassifier } from './rule-based-ticket-classifier';
 
 export class TicketService {
@@ -15,12 +15,17 @@ export class TicketService {
   async create(data: CreateTicketData): Promise<Ticket> {
     await this.ensureUserExists(data.userId);
 
-    const classification = await this.classifier.classify(data.requestText);
+    const classification = normalizeClassificationResult(await this.classifier.classify(data.requestText));
 
     return this.prismaClient.ticket.create({
       data: {
-        ...data,
-        ...classification
+        userId: data.userId,
+        requestText: data.requestText,
+        channel: classification.channel,
+        priority: classification.priority,
+        manualReview: classification.manualReview,
+        classificationConfidence: classification.confidence,
+        classificationAlternatives: classification.alternatives
       }
     });
   }
@@ -64,4 +69,25 @@ export class TicketService {
       throw new AppError('User not found', 404);
     }
   }
+}
+
+function normalizeClassificationResult(classification: ClassificationResult): ClassificationResult {
+  const alternatives = deduplicateAlternativeChannels(classification.channel, classification.alternatives);
+  const manualReview =
+    classification.manualReview ||
+    classification.confidence < classificationConfidenceThreshold ||
+    alternatives.length > 0;
+
+  return {
+    ...classification,
+    manualReview,
+    alternatives
+  };
+}
+
+function deduplicateAlternativeChannels(
+  channel: ClassificationResult['channel'],
+  alternatives: ClassificationResult['alternatives']
+): ClassificationResult['alternatives'] {
+  return [...new Set(alternatives)].filter((alternative) => alternative !== channel);
 }

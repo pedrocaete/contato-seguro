@@ -22,7 +22,9 @@ describe('GeminiTicketClassifier', () => {
       text: JSON.stringify({
         channel: 'SAC',
         priority: 'MEDIA',
-        manualReview: false
+        manualReview: false,
+        confidence: 0.84,
+        alternatives: ['FINANCEIRO']
       })
     });
 
@@ -39,7 +41,9 @@ describe('GeminiTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'SAC',
       priority: 'MEDIA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.84,
+      alternatives: ['FINANCEIRO']
     });
   });
 
@@ -50,13 +54,17 @@ describe('GeminiTicketClassifier', () => {
       text: JSON.stringify({
         channel: 'INVALIDO',
         priority: 'MEDIA',
-        manualReview: false
+        manualReview: false,
+        confidence: 0.4,
+        alternatives: []
       })
     });
     fallback.classify.mockResolvedValue({
       channel: 'FORA_DO_ESCOPO',
       priority: 'BAIXA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.2,
+      alternatives: []
     });
 
     const result = await classifier.classify('Mensagem vaga');
@@ -66,7 +74,9 @@ describe('GeminiTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'FORA_DO_ESCOPO',
       priority: 'BAIXA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.2,
+      alternatives: []
     });
   });
 
@@ -77,7 +87,9 @@ describe('GeminiTicketClassifier', () => {
     fallback.classify.mockResolvedValue({
       channel: 'FORA_DO_ESCOPO',
       priority: 'BAIXA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.2,
+      alternatives: []
     });
 
     const result = await classifier.classify('Oi');
@@ -94,7 +106,9 @@ describe('GeminiTicketClassifier', () => {
     fallback.classify.mockResolvedValue({
       channel: 'SUPORTE_TECNICO',
       priority: 'MEDIA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.55,
+      alternatives: ['FINANCEIRO']
     });
 
     const result = await classifier.classify('Estou com erro de acesso.');
@@ -104,7 +118,9 @@ describe('GeminiTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'SUPORTE_TECNICO',
       priority: 'MEDIA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.55,
+      alternatives: ['FINANCEIRO']
     });
   });
 });

@@ -47,16 +47,22 @@ export class RuleBasedTicketClassifier implements ITicketClassifier {
       return {
         channel: 'FORA_DO_ESCOPO',
         priority: 'BAIXA',
-        manualReview: true
+        manualReview: true,
+        confidence: 0.2,
+        alternatives: []
       };
     }
 
     const [winner, second] = matches;
+    const alternatives = second ? [second.channel] : [];
+    const confidence = calculateConfidence(winner.score, second?.score);
 
     return {
       channel: winner.channel,
       priority: winner.priority,
-      manualReview: Boolean(second && second.score === winner.score)
+      manualReview: Boolean(second && second.score === winner.score),
+      confidence,
+      alternatives
     };
   }
 }
@@ -70,4 +76,16 @@ function normalizeText(text: string): string {
 
 function countMatches(text: string, keywords: string[]): number {
   return keywords.reduce((score, keyword) => score + Number(text.includes(keyword)), 0);
+}
+
+function calculateConfidence(winnerScore: number, secondScore?: number): number {
+  if (!secondScore) {
+    return winnerScore >= 2 ? 0.9 : 0.78;
+  }
+
+  if (winnerScore === secondScore) {
+    return 0.55;
+  }
+
+  return 0.68;
 }

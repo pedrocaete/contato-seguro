@@ -24,7 +24,9 @@ describe('TicketService', () => {
     classifierMock.classify.mockResolvedValue({
       channel: 'SAC',
       priority: 'MEDIA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.86,
+      alternatives: []
     });
     prismaMock.ticket.create.mockResolvedValue(ticket);
 
@@ -42,10 +44,69 @@ describe('TicketService', () => {
         requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
         channel: 'SAC',
         priority: 'MEDIA',
-        manualReview: false
+        manualReview: false,
+        classificationConfidence: 0.86,
+        classificationAlternatives: []
       }
     });
     expect(result).toEqual(ticket);
+  });
+
+  it('marks manual review when confidence is below the threshold', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(createUser());
+    classifierMock.classify.mockResolvedValue({
+      channel: 'SAC',
+      priority: 'MEDIA',
+      manualReview: false,
+      confidence: 0.6,
+      alternatives: []
+    });
+    prismaMock.ticket.create.mockResolvedValue({
+      ...createTicket(),
+      manualReview: true,
+      classificationConfidence: 0.6
+    });
+
+    await service.create({
+      userId: 1,
+      requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
+    });
+
+    expect(prismaMock.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        manualReview: true,
+        classificationConfidence: 0.6,
+        classificationAlternatives: []
+      })
+    });
+  });
+
+  it('marks manual review when alternatives are present', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(createUser());
+    classifierMock.classify.mockResolvedValue({
+      channel: 'SAC',
+      priority: 'MEDIA',
+      manualReview: false,
+      confidence: 0.9,
+      alternatives: ['FINANCEIRO']
+    });
+    prismaMock.ticket.create.mockResolvedValue({
+      ...createTicket(),
+      manualReview: true,
+      classificationAlternatives: ['FINANCEIRO']
+    });
+
+    await service.create({
+      userId: 1,
+      requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
+    });
+
+    expect(prismaMock.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        manualReview: true,
+        classificationAlternatives: ['FINANCEIRO']
+      })
+    });
   });
 
   it('fails when creating a ticket for a non-existing user', async () => {
@@ -157,6 +218,8 @@ function createTicket(): Ticket {
     status: 'ABERTO' satisfies TicketStatus,
     priority: 'MEDIA' satisfies TicketPriority,
     manualReview: false,
+    classificationConfidence: 0.86,
+    classificationAlternatives: [],
     createdAt: new Date(),
     updatedAt: new Date()
   };

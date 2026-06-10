@@ -116,6 +116,17 @@ Prioridade inicial:
 
 Casos ambíguos ou sem contexto suficiente são marcados com `manualReview: true`.
 
+Cada ticket persistido tambem registra:
+
+- `classificationConfidence`: confianca da classificacao entre `0` e `1`
+- `classificationAlternatives`: canais alternativos sugeridos pela classificacao
+
+O backend tambem promove `manualReview` automaticamente quando:
+
+- `classificationConfidence < 0.75`
+- houver pelo menos um item em `classificationAlternatives`
+- o classificador ja sinalizar ambiguidade explicitamente
+
 ## Exemplos de requisição
 
 Health check:

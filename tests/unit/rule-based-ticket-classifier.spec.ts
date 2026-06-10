@@ -9,7 +9,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'OUVIDORIA',
       priority: 'ALTA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.68,
+      alternatives: ['SAC']
     });
   });
 
@@ -19,7 +21,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'SAC',
       priority: 'MEDIA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.9,
+      alternatives: []
     });
   });
 
@@ -29,7 +33,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'SUPORTE_TECNICO',
       priority: 'MEDIA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.9,
+      alternatives: []
     });
   });
 
@@ -39,7 +45,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'FINANCEIRO',
       priority: 'MEDIA',
-      manualReview: false
+      manualReview: false,
+      confidence: 0.9,
+      alternatives: []
     });
   });
 
@@ -49,7 +57,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'FORA_DO_ESCOPO',
       priority: 'BAIXA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.2,
+      alternatives: []
     });
   });
 
@@ -59,7 +69,9 @@ describe('RuleBasedTicketClassifier', () => {
     expect(result).toEqual({
       channel: 'SUPORTE_TECNICO',
       priority: 'MEDIA',
-      manualReview: true
+      manualReview: true,
+      confidence: 0.55,
+      alternatives: ['FINANCEIRO']
     });
   });
 });

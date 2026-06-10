@@ -32,6 +32,8 @@ describe('Ticket routes', () => {
       status: 'ABERTO',
       priority: 'MEDIA',
       manualReview: false,
+      classificationConfidence: 0.86,
+      classificationAlternatives: [],
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -48,7 +50,9 @@ describe('Ticket routes', () => {
         requestText: 'Meu produto nao chegou e quero cancelar a assinatura.',
         channel: 'SAC',
         priority: 'MEDIA',
-        manualReview: false
+        manualReview: false,
+        classificationConfidence: 0.9,
+        classificationAlternatives: []
       }
     });
     expect(response.body).toEqual(
@@ -93,6 +97,8 @@ describe('Ticket routes', () => {
         status: 'ABERTO',
         priority: 'MEDIA',
         manualReview: false,
+        classificationConfidence: 0.86,
+        classificationAlternatives: [],
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -114,6 +120,8 @@ describe('Ticket routes', () => {
         status: 'ABERTO',
         priority: 'MEDIA',
         manualReview: false,
+        classificationConfidence: 0.86,
+        classificationAlternatives: [],
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -147,6 +155,8 @@ describe('Ticket routes', () => {
       status: 'ABERTO',
       priority: 'MEDIA',
       manualReview: false,
+      classificationConfidence: 0.86,
+      classificationAlternatives: [],
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -166,6 +176,8 @@ describe('Ticket routes', () => {
       status: 'ABERTO',
       priority: 'MEDIA',
       manualReview: false,
+      classificationConfidence: 0.86,
+      classificationAlternatives: [],
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -177,6 +189,8 @@ describe('Ticket routes', () => {
       status: 'EM_ANALISE' satisfies TicketStatus,
       priority: 'MEDIA',
       manualReview: false,
+      classificationConfidence: 0.86,
+      classificationAlternatives: [],
       createdAt: new Date(),
       updatedAt: new Date()
     });
