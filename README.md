@@ -157,6 +157,24 @@ curl -X POST http://localhost:3333/tickets \
   -d '{"userId":1,"requestText":"Meu produto nao chegou e quero cancelar a assinatura."}'
 ```
 
+Exemplo de resposta:
+
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "requestText": "Meu produto nao chegou e quero cancelar a assinatura.",
+  "channel": "SAC",
+  "status": "ABERTO",
+  "priority": "MEDIA",
+  "manualReview": false,
+  "classificationConfidence": 0.9,
+  "classificationAlternatives": [],
+  "createdAt": "2026-06-10T00:00:00.000Z",
+  "updatedAt": "2026-06-10T00:00:00.000Z"
+}
+```
+
 Listar tickets:
 
 ```bash
@@ -173,6 +191,24 @@ Buscar ticket por id:
 
 ```bash
 curl http://localhost:3333/tickets/1
+```
+
+Exemplo de resposta com revisão manual:
+
+```json
+{
+  "id": 2,
+  "userId": 1,
+  "requestText": "Tenho erro e cobranca indevida.",
+  "channel": "SUPORTE_TECNICO",
+  "status": "ABERTO",
+  "priority": "MEDIA",
+  "manualReview": true,
+  "classificationConfidence": 0.55,
+  "classificationAlternatives": ["FINANCEIRO"],
+  "createdAt": "2026-06-10T00:05:00.000Z",
+  "updatedAt": "2026-06-10T00:05:00.000Z"
+}
 ```
 
 Atualizar status do ticket:
