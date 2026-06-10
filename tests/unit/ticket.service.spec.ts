@@ -130,6 +130,24 @@ describe('TicketService', () => {
     ).rejects.toThrow(new AppError('User not found', 404));
   });
 
+  it('rolls back ticket creation when queue enqueue fails', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(createUser());
+    prismaMock.ticket.create.mockResolvedValue(createPendingTicket());
+    dispatcherMock.enqueue.mockRejectedValue(new Error('Redis unavailable'));
+    prismaMock.ticket.delete.mockResolvedValue(createPendingTicket());
+
+    await expect(
+      service.create({
+        userId: 1,
+        requestText: 'Meu produto nao chegou e quero cancelar a assinatura.'
+      })
+    ).rejects.toThrow(new AppError('Ticket classification queue is unavailable', 503));
+
+    expect(prismaMock.ticket.delete).toHaveBeenCalledWith({
+      where: { id: 1 }
+    });
+  });
+
   it('returns all tickets', async () => {
     prismaMock.ticket.findMany.mockResolvedValue([createClassifiedTicket()]);
 

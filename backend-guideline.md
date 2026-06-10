@@ -9,9 +9,11 @@ src/
 ├── controllers/    # Thin — delega a lógica para os Services
 ├── services/       # Lógica de domínio, orquestração e Prisma
 ├── data/           # Schemas Zod e tipos inferidos para entrada da aplicação
+├── queues/         # Abstrações de enfileiramento e dispatch de jobs
+├── workers/        # Processadores assíncronos consumidos fora do ciclo HTTP
 ├── middlewares/    # Interceptadores (Validação, Error Handler, Auth)
 ├── routes/         # Definição de URIs e mapeamento para Controllers
-├── lib/            # Instâncias globais (Prisma, Logger, Gemini)
+├── lib/            # Instâncias globais e factories compartilhadas (Prisma, Logger, Gemini, Redis)
 └── app.ts          # Setup do Express (Middlewares globais, CORS)
 ```
 
@@ -56,6 +58,7 @@ export class TicketController {
 - Isolamento HTTP: Services não conhecem `req` ou `res`. Eles recebem tipos primitivos ou tipos da camada `data` e retornam objetos ou disparam erros.
 - Acesso a dados: é a única camada autorizada a chamar o `prismaClient`. Substitui o uso de Repositories.
 - Erros: se uma regra de negócio falhar, lance um erro (preferencialmente uma classe `AppError` customizada) para interromper o fluxo. O Controller/Express vai capturar isso.
+- Processamento assíncrono: quando houver fila, o Worker deve delegar a regra de domínio para o Service. Worker não acessa Prisma diretamente para decidir regra.
 
 ```ts
 export class TicketService {

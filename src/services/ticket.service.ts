@@ -31,7 +31,24 @@ export class TicketService {
       }
     });
 
-    await this.dispatcher.enqueue(ticket.id);
+    try {
+      await this.dispatcher.enqueue(ticket.id);
+    } catch (error) {
+      const rollbackSucceeded = await this.rollbackCreatedTicket(ticket.id);
+
+      logger.error(
+        {
+          action: 'enqueue_ticket_classification',
+          ticketId: ticket.id,
+          userId: ticket.userId,
+          rollbackSucceeded,
+          err: error
+        },
+        'Failed to enqueue ticket classification job'
+      );
+
+      throw new AppError('Ticket classification queue is unavailable', 503);
+    }
 
     logger.info(
       {
@@ -107,6 +124,18 @@ export class TicketService {
 
     if (!user) {
       throw new AppError('User not found', 404);
+    }
+  }
+
+  private async rollbackCreatedTicket(ticketId: number): Promise<boolean> {
+    try {
+      await this.prismaClient.ticket.delete({
+        where: { id: ticketId }
+      });
+
+      return true;
+    } catch {
+      return false;
     }
   }
 }
