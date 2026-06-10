@@ -26,14 +26,6 @@ const envSchema = z
         message: 'DATABASE_URL is required outside test environment.'
       });
     }
-
-    if (data.TICKET_CLASSIFIER_PROVIDER === 'gemini' && !data.GEMINI_API_KEY) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['GEMINI_API_KEY'],
-        message: 'GEMINI_API_KEY is required when TICKET_CLASSIFIER_PROVIDER is gemini.'
-      });
-    }
   });
 
 export const env = envSchema.parse(process.env);
